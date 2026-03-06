@@ -106,7 +106,7 @@ services:
     build: ./gym-frontend
     container_name: gym-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       gym-booking:
         condition: service_healthy
@@ -116,3 +116,4 @@ services:
 
 volumes:
   gym-data:
+
