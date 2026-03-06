@@ -26,9 +26,13 @@ services:
 
   # ── Notification Service ────────────────────────────────────────────
   gym-notifier:
+<<<<<<< HEAD:docker-compose.yml
     build:
       context: .. # Tells Docker to look at the project root
       dockerfile: container_app/notifier.Dockerfile
+=======
+    build: ../src/gym-notifier
+>>>>>>> c72eb22 (Final structure: src, infrastructure, container_app, and kube):container_app/docker-compose.yml
     container_name: gym-notifier
     ports:
       - "4003:4003"
@@ -52,9 +56,13 @@ services:
 
   # ── Booking Service ─────────────────────────────────────────────────
   gym-booking:
+<<<<<<< HEAD:docker-compose.yml
     build:
       context: ..
       dockerfile: container_app/booking.Dockerfile
+=======
+    build: ../src/gym-booking
+>>>>>>> c72eb22 (Final structure: src, infrastructure, container_app, and kube):container_app/docker-compose.yml
     container_name: gym-booking
     ports:
       - "4001:4001"
@@ -81,9 +89,13 @@ services:
 
   # ── Membership Service ──────────────────────────────────────────────
   gym-membership:
+<<<<<<< HEAD:docker-compose.yml
     build:
       context: ..
       dockerfile: container_app/membership.Dockerfile
+=======
+    build: ../src/gym-membership
+>>>>>>> c72eb22 (Final structure: src, infrastructure, container_app, and kube):container_app/docker-compose.yml
     container_name: gym-membership
     ports:
       - "4002:4002"
@@ -110,9 +122,13 @@ services:
 
   # ── Frontend (Nginx reverse proxy + React SPA) ─────────────────────
   gym-frontend:
+<<<<<<< HEAD:docker-compose.yml
     build:
       context: ..
       dockerfile: container_app/frontend.Dockerfile
+=======
+    build: ../src/gym-frontend
+>>>>>>> c72eb22 (Final structure: src, infrastructure, container_app, and kube):container_app/docker-compose.yml
     container_name: gym-frontend
     ports:
       - "3000:80"
