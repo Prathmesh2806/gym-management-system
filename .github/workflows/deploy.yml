@@ -27,8 +27,8 @@ jobs:
       - name: Build and Push Image
         run: |
           # Build using the specific service folder in /src
-          docker build -t gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }} ./src/gym-${{ matrix.service }}
-          docker push gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }}
+          docker build -t gymappregistryunique99.azurecr.io/${{ matrix.service }}:${{ github.sha }} ./src/gym-${{ matrix.service }}
+          docker push gymappregistryunique99.azurecr.io/${{ matrix.service }}:${{ github.sha }}
 
       - name: Set AKS Context
         uses: azure/aks-set-context@v3
