@@ -1,0 +1,45 @@
+name: Deploy Gym App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [db, frontend, booking, membership, notifier]
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Azure Container Registry Login
+        run: az acr login --name gymappregistryunique99
+
+      - name: Build and Push Image
+        run: |
+          # Build using the specific service folder in /src
+          docker build -t gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }} ./src/gym-${{ matrix.service }}
+          docker push gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }}
+
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: gym-app-production-rg
+          cluster-name: gym-aks-cluster
+
+      - name: Deploy to AKS
+        run: |
+          # 1. Update the image tag in the YAML file dynamically
+          sed -i "s|image: .*|image: gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }}|g" kube/${{ matrix.service }}-deploy.yaml
+          
+          # 2. Apply the manifest
+          kubectl apply -f kube/${{ matrix.service }}-deploy.yaml
