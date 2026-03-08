@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # ── MySQL Database ──────────────────────────────────────────────────
+  gym-db:
+    image: mysql:8
+    container_name: gym-db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=gymrootpass
+      - MYSQL_DATABASE=gymapp
+      - MYSQL_USER=gymuser
+      - MYSQL_PASSWORD=gympass
+    volumes:
+      - gym-data:/var/lib/mysql
+      # Path check: ensure init.sql is in src/db
+      - ../src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgymrootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Notification Service ────────────────────────────────────────────
+  gym-notifier:
+    build: ../src/gym-notifier
+    container_name: gym-notifier
+    ports:
+      - "4003:4003"
+    environment:
+      - PORT=4003
+      - DB_HOST=gym-db
+      - DB_PORT=3306
+      - DB_USER=gymuser
+      - DB_PASSWORD=gympass
+      - DB_NAME=gymapp
+    depends_on:
+      gym-db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:4003/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Booking Service ─────────────────────────────────────────────────
+  gym-booking:
+    build: ../src/gym-booking
+    container_name: gym-booking
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - NOTIFIER_URL=http://gym-notifier:4003
+      - DB_HOST=gym-db
+      - DB_PORT=3306
+      - DB_USER=gymuser
+      - DB_PASSWORD=gympass
+      - DB_NAME=gymapp
+    depends_on:
+      gym-db:
+        condition: service_healthy
+      gym-notifier:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:4001/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Membership Service ──────────────────────────────────────────────
+  gym-membership:
+    build: ../src/gym-membership
+    container_name: gym-membership
+    ports:
+      - "4002:4002"
+    environment:
+      - PORT=4002
+      - NOTIFIER_URL=http://gym-notifier:4003
+      - DB_HOST=gym-db
+      - DB_PORT=3306
+      - DB_USER=gymuser
+      - DB_PASSWORD=gympass
+      - DB_NAME=gymapp
+    depends_on:
+      gym-db:
+        condition: service_healthy
+      gym-notifier:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:4002/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Frontend ─────────────────────
+  gym-frontend:
+    build: ../src/gym-frontend
+    container_name: gym-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      gym-booking:
+        condition: service_healthy
+      gym-membership:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  gym-data:

@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-storage-secret
+type: Opaque
+data:
+  azurestorageaccountname: PLACEHOLDER_NAME
+  azurestorageaccountkey: PLACEHOLDER_KEY
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gym-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gym-db
+  template:
+    metadata:
+      labels:
+        app: gym-db
+    spec:
+      containers:
+      - name: mysql
+        image: gymappregistryunique99.azurecr.io/gym-db:v1
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "gymrootpass"
+        - name: MYSQL_DATABASE
+          value: "gymapp"
+        # --- ADDED THIS SECTION ---
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql # This is where MySQL saves its files
+      volumes:
+      - name: mysql-storage
+        azureFile:
+          secretName: azure-storage-secret
+          shareName: gym-app-data # This must match your Terraform share name
+          readOnly: false
+      # ---------------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gym-db-service
+spec:
+  selector:
+    app: gym-db
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+  type: ClusterIP
