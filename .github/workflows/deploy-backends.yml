@@ -18,6 +18,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: 'gym-app-production-rg' 
+          cluster-name: 'gym-aks-cluster'        
+
       - name: Build and Push Changed Backends
         run: |
           az acr login --name gymappregistryunique99
