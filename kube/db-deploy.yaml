@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: azure-storage-secret
 type: Opaque
-data:
+stringData:
   azurestorageaccountname: PLACEHOLDER_NAME
   azurestorageaccountkey: PLACEHOLDER_KEY
 ---
