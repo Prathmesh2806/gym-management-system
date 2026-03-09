@@ -1,0 +1,34 @@
+name: 1. Deploy Database
+on:
+  push:
+    paths: ['src/db/**', 'kube/db-deploy.yaml']
+  workflow_dispatch:
+
+jobs:
+  db-stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push DB Image
+        run: |
+          az acr login --name gymappregistryunique99
+          docker build -t gymappregistryunique99.azurecr.io/gym-db:${{ github.sha }} ./src/db
+          docker push gymappregistryunique99.azurecr.io/gym-db:${{ github.sha }}
+
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: 'gym-app-production-rg'
+          cluster-name: 'gym-aks-cluster'
+
+      - name: Deploy to K8s
+        run: |
+          sed -i 's|image:.*|image: gymappregistryunique99.azurecr.io/gym-db:${{ github.sha }}|' kube/db-deploy.yaml
+          kubectl apply -f kube/db-deploy.yaml
+          kubectl rollout status deployment/gym-db --timeout=90s
