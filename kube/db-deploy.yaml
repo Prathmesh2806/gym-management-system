@@ -21,18 +21,18 @@ spec:
       labels:
         app: gym-db
     spec:
-    securityContext:
+      securityContext:
         # This ensures the pod can manage permissions on the SMB share
         fsGroup: 999
         runAsUser: 999
-    initContainers:
+      initContainers:
       - name: fix-permissions
         image: busybox
         command: ["sh", "-c", "chmod 777 /var/lib/mysql"]
         volumeMounts:
         - name: mysql-storage
           mountPath: /var/lib/mysql
-    containers:
+      containers:
       - name: mysql
         image: gymappregistryunique99.azurecr.io/gym-db:v1
         args:
@@ -46,7 +46,6 @@ spec:
           value: "gymrootpass"
         - name: MYSQL_DATABASE
           value: "gymapp"
-        # --- ADDED THIS SECTION ---
         volumeMounts:
         - name: mysql-storage
           mountPath: /var/lib/mysql # This is where MySQL saves its files
@@ -56,7 +55,6 @@ spec:
           secretName: azure-storage-secret
           shareName: gym-app-data # This must match your Terraform share name
           readOnly: false
-      # ---------------------------
 ---
 apiVersion: v1
 kind: Service
