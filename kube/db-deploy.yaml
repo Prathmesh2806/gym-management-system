@@ -33,6 +33,9 @@ spec:
           - "--innodb_use_native_aio=0"
           - "--innodb_doublewrite=0"
           - "--innodb_flush_method=fsync"
+          - "--innodb_log_file_size=64M"
+          - "--innodb_page_cleaner_priority=1"
+          - "--innodb_purge_threads=1"
         ports:
         - containerPort: 3306
         env:
