@@ -82,3 +82,4 @@ CREATE TABLE notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- CI/CD Trigger
+-- Trigger 1
