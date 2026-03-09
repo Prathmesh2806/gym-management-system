@@ -33,6 +33,14 @@ resource "azurerm_subnet" "db" {
   address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 21)]
 }
 
+# --- ADDITION: Subnet for Application Gateway ---
+resource "azurerm_subnet" "appgw" {
+  name                 = "appgw-subnet"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, 31)] # Using index 31 to avoid any conflicts
+}
+
 # --- Security Logic ---
 
 # NSG for App Subnet (Fixes the Timeout)
@@ -85,6 +93,3 @@ resource "azurerm_subnet_network_security_group_association" "db_assoc" {
   network_security_group_id = azurerm_network_security_group.db_nsg.id
 }
 
-output "aks_subnet_id" {
-  value = azurerm_subnet.app[0].id
-}

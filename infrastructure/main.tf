@@ -36,9 +36,9 @@ module "aks" {
   vm_size             = var.vm_size
   service_cidr        = var.service_cidr
   dns_service_ip      = var.dns_service_ip
-  
-  # Connects AKS to the first private app subnet created by the network module
   vnet_subnet_id      = module.network.aks_subnet_id 
+  appgw_subnet_id     = module.network.appgw_subnet_id
+  vnet_id             = module.network.vnet_id
 }
 
 module "acr" {

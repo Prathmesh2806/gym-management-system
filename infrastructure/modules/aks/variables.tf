@@ -26,10 +26,18 @@ variable "vnet_subnet_id" {
   type = string
 }
 
+variable "appgw_subnet_id" {
+  type = string
+}
+
 variable "service_cidr" {
   type = string
 }
 
 variable "dns_service_ip" {
+  type = string
+}
+
+variable "vnet_id" {
   type = string
 }

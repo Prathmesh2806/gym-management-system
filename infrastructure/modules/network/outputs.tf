@@ -22,3 +22,11 @@ output "vnet_id" {
   description = "The ID of the Virtual Network"
   value       = azurerm_virtual_network.vnet.id
 }
+
+output "aks_subnet_id" {
+  value = azurerm_subnet.app[0].id
+}
+
+output "appgw_subnet_id" {
+  value = azurerm_subnet.appgw.id
+}

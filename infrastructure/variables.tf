@@ -101,3 +101,7 @@ variable "storage_account_name" {
   description = "The full name of the storage account."
   default     = null
 }
+
+variable "appgw_subnet_prefix" {
+  type = list(string)
+}  
