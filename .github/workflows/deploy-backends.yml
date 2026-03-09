@@ -4,6 +4,8 @@ on:
     workflows: ["1. Deploy Database"]
     types: [completed]
   push:
+    branches:
+      - main
     paths: ['src/booking/**', 'src/membership/**', 'src/notifier/**', 'kube/*-deploy.yaml']
 
 jobs:

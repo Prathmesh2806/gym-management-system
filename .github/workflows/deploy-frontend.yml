@@ -4,6 +4,8 @@ on:
     workflows: ["2. Deploy Backends"]
     types: [completed]
   push:
+    branches:
+      - main
     paths: 
       - 'src/frontend/**'
       - 'kube/frontend-deploy.yaml'

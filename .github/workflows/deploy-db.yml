@@ -1,6 +1,8 @@
 name: 1. Deploy Database
 on:
   push:
+    branches:
+      - main
     paths: ['src/db/**', 'kube/db-deploy.yaml']
   workflow_dispatch:
 
