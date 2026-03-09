@@ -25,13 +25,7 @@ spec:
         # This ensures the pod can manage permissions on the SMB share
         fsGroup: 999
         runAsUser: 999
-      initContainers:
-      - name: fix-permissions
-        image: busybox
-        command: ["sh", "-c", "chmod 777 /var/lib/mysql"]
-        volumeMounts:
-        - name: mysql-storage
-          mountPath: /var/lib/mysql
+        runAsGroup: 999
       containers:
       - name: mysql
         image: gymappregistryunique99.azurecr.io/gym-db:v1
