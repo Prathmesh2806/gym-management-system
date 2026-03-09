@@ -21,12 +21,24 @@ spec:
       labels:
         app: gym-db
     spec:
-      containers:
+    securityContext:
+        # This ensures the pod can manage permissions on the SMB share
+        fsGroup: 999
+        runAsUser: 999
+    initContainers:
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chmod 777 /var/lib/mysql"]
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+    containers:
       - name: mysql
         image: gymappregistryunique99.azurecr.io/gym-db:v1
         args:
           - "--innodb_use_native_aio=0"
           - "--innodb_doublewrite=0"
+          - "--innodb_flush_method=fsync"
         ports:
         - containerPort: 3306
         env:
