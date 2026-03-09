@@ -50,11 +50,11 @@ spec:
           mountPath: /var/lib/mysql 
       volumes:
       - name: mysql-storage
-        azureFile:
-          secretName: azure-storage-secret
-          # SWITCHED TO NEW SHARE TO AVOID PREVIOUS CORRUPTION
-          shareName: gym-db-v4 
-          readOnly: false
+        azureDisk:
+          kind: Managed
+          diskName: gym-db-disk
+          diskURI: "/subscriptions/676359b7-4fe4-4523-9a42-97863a95d115/resourceGroups/gym-app-production-rg/providers/Microsoft.Compute/disks/gym-db-disk"
+          fsType: ext4
 ---
 apiVersion: v1
 kind: Service

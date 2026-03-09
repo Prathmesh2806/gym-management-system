@@ -7,3 +7,6 @@ output "gym_storage_connection_string" {
   value       = module.storage.primary_connection_string
   sensitive   = true
 }
+output "gym_db_disk_id" {
+  value = azurerm_managed_disk.gym_db_disk.id
+}
