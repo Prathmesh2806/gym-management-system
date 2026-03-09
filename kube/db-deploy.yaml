@@ -45,9 +45,6 @@ spec:
           value: "gymapp"
         - name: MYSQL_ALLOW_EMPTY_PASSWORD
           value: "yes"
-        volumeMounts:
-        - name: mysql-storage
-          mountPath: /var/lib/mysql 
       
 apiVersion: v1
 kind: Service
