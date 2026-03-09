@@ -4,7 +4,10 @@ on:
     workflows: ["2. Deploy Backends"]
     types: [completed]
   push:
-    paths: ['src/frontend/**', 'kube/frontend-deploy.yaml']
+    paths: 
+      - 'src/frontend/**'
+      - 'kube/frontend-deploy.yaml'
+      - 'kube/gym-ingress.yaml' 
 
 jobs:
   frontend-stage:
@@ -17,7 +20,6 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
 
       - name: Set AKS Context
         uses: azure/aks-set-context@v3
@@ -33,6 +35,14 @@ jobs:
 
       - name: Deploy to K8s
         run: |
+          # Image update kar
           sed -i 's|image:.*|image: gymappregistryunique99.azurecr.io/gym-frontend:${{ github.sha }}|' kube/frontend-deploy.yaml
+          
+          # Deploy frontend service & deployment
           kubectl apply -f kube/frontend-deploy.yaml
+          
+          # 2. ATA INGRESS APPLY KAR (Important!)
+          kubectl apply -f kube/gym-ingress.yaml
+          
+          # Rollout check
           kubectl rollout status deployment/gym-frontend --timeout=90s
