@@ -5,14 +5,6 @@ output "app_subnet_ids" {
   value       = azurerm_subnet.app[*].id
 }
 
-# 2. The Specific ID for the AKS Cluster
-# Since you are on the Free Tier (4 vCPU limit), we pick the first subnet 
-# to host your single worker node (Standard_B2s).
-output "aks_subnet_id" {
-  description = "The ID of the first App subnet for AKS deployment"
-  value       = azurerm_subnet.app[0].id
-}
-
 # 3. Public Subnet IDs (For your Future Load Balancer/Ingress)
 output "public_subnet_ids" {
   description = "List of IDs for the Public subnets"
