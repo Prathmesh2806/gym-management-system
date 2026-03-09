@@ -14,13 +14,12 @@ resource "azurerm_subnet" "public" {
   address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 1)]
 }
 
-# Private App Subnets
+# Private App Subnets (Where AKS Lives)
 resource "azurerm_subnet" "app" {
   count                = var.app_subnet_count
   name                 = "${var.app_subnet_prefix}-${count.index + 1}"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  # Uses index + 11 to keep your 10.0.11.x logic
   address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 11)]
   service_endpoints    = var.app_service_endpoints
 }
@@ -31,12 +30,37 @@ resource "azurerm_subnet" "db" {
   name                 = "${var.db_subnet_prefix}-${count.index + 1}"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  # Uses index + 21 to keep your 10.0.21.x logic
   address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 21)]
 }
 
 # --- Security Logic ---
 
+# NSG for App Subnet (Fixes the Timeout)
+resource "azurerm_network_security_group" "app_nsg" {
+  name                = "gym-app-nsg"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  security_rule {
+    name                       = "AllowHTTPInbound"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "app_assoc" {
+  count                     = var.app_subnet_count
+  subnet_id                 = azurerm_subnet.app[count.index].id
+  network_security_group_id = azurerm_network_security_group.app_nsg.id
+}
+
+# NSG for DB Subnet
 resource "azurerm_network_security_group" "db_nsg" {
   name                = var.db_nsg_name
   location            = var.location
@@ -50,7 +74,6 @@ resource "azurerm_network_security_group" "db_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = var.db_port
-    # Dynamically gets all CIDRs from the app subnets created above
     source_address_prefixes    = azurerm_subnet.app[*].address_prefixes[0]
     destination_address_prefix = "*"
   }
@@ -60,4 +83,8 @@ resource "azurerm_subnet_network_security_group_association" "db_assoc" {
   count                     = var.db_subnet_count
   subnet_id                 = azurerm_subnet.db[count.index].id
   network_security_group_id = azurerm_network_security_group.db_nsg.id
+}
+
+output "aks_subnet_id" {
+  value = azurerm_subnet.app[0].id
 }

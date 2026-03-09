@@ -1,12 +1,3 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: azure-storage-secret
-type: Opaque
-stringData:
-  azurestorageaccountname: PLACEHOLDER_NAME
-  azurestorageaccountkey: PLACEHOLDER_KEY
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,21 +12,9 @@ spec:
       labels:
         app: gym-db
     spec:
-      securityContext:
-        # Optimized for Azure File SMB permissions
-        fsGroup: 999
-        runAsUser: 999
-        runAsGroup: 999
       containers:
       - name: mysql
         image: gymappregistryunique99.azurecr.io/gym-db:v1
-        args:
-          - "--innodb_use_native_aio=0"
-          - "--innodb_doublewrite=0"
-          - "--innodb_flush_method=fsync"
-          - "--innodb_redo_log_capacity=67108864"
-          - "--innodb_page_cleaner_priority=1"
-          - "--innodb_purge_threads=1"
         ports:
         - containerPort: 3306
         env:
@@ -45,7 +24,7 @@ spec:
           value: "gymapp"
         - name: MYSQL_ALLOW_EMPTY_PASSWORD
           value: "yes"
-      
+---
 apiVersion: v1
 kind: Service
 metadata:
