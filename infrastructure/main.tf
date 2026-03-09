@@ -49,24 +49,3 @@ module "acr" {
   aks_principal_id    = module.aks.principal_id
 }
 
-module "storage" {
-  source               = "./modules/storage"
-  resource_group_name  = azurerm_resource_group.gym_rg.name
-  location             = azurerm_resource_group.gym_rg.location
-  storage_account_name = "gymappprodstorage${random_string.suffix.result}"
-  
-  # Grants access to ALL private app subnets (for the 2+2+2 setup)
-  app_subnet_ids       = module.network.app_subnet_ids 
-
-  account_tier         = var.storage_account_tier
-  replication_type     = var.storage_replication_type
-}
-
-resource "azurerm_managed_disk" "gym_db_disk" {
-  name                 = "gym-db-disk"
-  location             = var.location
-  resource_group_name  = var.resource_group_name
-  storage_account_type = "Premium_LRS"
-  create_option        = "Empty"
-  disk_size_gb         = 10
-}
