@@ -24,6 +24,9 @@ spec:
       containers:
       - name: mysql
         image: gymappregistryunique99.azurecr.io/gym-db:v1
+        args:
+          - "--innodb_use_native_aio=0"
+          - "--innodb_doublewrite=0"
         ports:
         - containerPort: 3306
         env:
