@@ -41,13 +41,9 @@ jobs:
       - name: Deploy to AKS
         run: |
           # 1. Update the image tag in the YAML file dynamically
-          # This matches your files like kube/db-deploy.yaml
+          # This replaces the 'image:' line with the newly built version from ACR
           sed -i "s|image: .*|image: gymappregistryunique99.azurecr.io/gym-${{ matrix.service }}:${{ github.sha }}|g" kube/${{ matrix.service }}-deploy.yaml
           
-          # Inject Azure Storage credentials securely if deploying the database
-          if [ "${{ matrix.service }}" == "db" ]; 
-          
-          fi
-          
           # 2. Apply the manifest
+          # This now uses the static Disk ID we added to db-deploy.yaml
           kubectl apply -f kube/${{ matrix.service }}-deploy.yaml
