@@ -22,7 +22,7 @@ spec:
         app: gym-db
     spec:
       securityContext:
-        # This ensures the pod can manage permissions on the SMB share
+        # Optimized for Azure File SMB permissions
         fsGroup: 999
         runAsUser: 999
         runAsGroup: 999
@@ -40,14 +40,17 @@ spec:
           value: "gymrootpass"
         - name: MYSQL_DATABASE
           value: "gymapp"
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+          value: "yes"
         volumeMounts:
         - name: mysql-storage
-          mountPath: /var/lib/mysql # This is where MySQL saves its files
+          mountPath: /var/lib/mysql 
       volumes:
       - name: mysql-storage
         azureFile:
           secretName: azure-storage-secret
-          shareName: gym-app-data # This must match your Terraform share name
+          # SWITCHED TO NEW SHARE TO AVOID PREVIOUS CORRUPTION
+          shareName: gym-db-v4 
           readOnly: false
 ---
 apiVersion: v1
