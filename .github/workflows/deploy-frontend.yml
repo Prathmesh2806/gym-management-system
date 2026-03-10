@@ -26,10 +26,15 @@ jobs:
 
       - name: Set Context
         run: |
-          echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          if [ "${{ github.event_name }}" == "repository_dispatch" ] && [ -n "${{ github.event.client_payload.acr_name }}" ]; then
+            echo "ACR_NAME=${{ github.event.client_payload.acr_name }}" >> $GITHUB_ENV
+          else
+            echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          fi
+          
           echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
           echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
-
+          
       - name: Build, Push and Deploy
         run: |
           az acr login --name ${{ env.ACR_NAME }}
