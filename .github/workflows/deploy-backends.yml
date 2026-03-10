@@ -1,46 +1,55 @@
 name: 2. Deploy Backends
 on:
-  workflow_run:
-    workflows: ["1. Deploy Database"]
-    types: [completed]
+  repository_dispatch:
+    types: [deploy-gym-backends]
   push:
-    branches:
-      - main
+    branches: [main]
     paths: ['src/booking/**', 'src/membership/**', 'src/notifier/**', 'kube/*-deploy.yaml']
 
 jobs:
   backend-stage:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set Environment
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "DEPLOY_ENV=${{ github.event.client_payload.env }}" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+          fi
 
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-
-      - name: Set AKS Context
-        uses: azure/aks-set-context@v3
-        with:
-          resource-group: 'gym-app-production-rg' 
-          cluster-name: 'gym-aks-cluster'        
-
-      - name: Build and Push Changed Backends
+      - name: Set Names
         run: |
-          az acr login --name gymappregistryunique99
-          # Logic to build only the modified service
-          if [[ "${{ github.event.head_commit.modified }}" == *"src/booking"* ]]; then
-            docker build -t gymappregistryunique99.azurecr.io/gym-booking:${{ github.sha }} ./src/booking
-            docker push gymappregistryunique99.azurecr.io/gym-booking:${{ github.sha }}
-            sed -i 's|image:.*|image: gymappregistryunique99.azurecr.io/gym-booking:${{ github.sha }}|' kube/booking-deploy.yaml
-            kubectl apply -f kube/booking-deploy.yaml
-          fi
-          # Repeat for Membership and Notifier...
-          if [[ "${{ github.event.head_commit.modified }}" == *"src/membership"* ]]; then
-            docker build -t gymappregistryunique99.azurecr.io/gym-membership:${{ github.sha }} ./src/membership
-            docker push gymappregistryunique99.azurecr.io/gym-membership:${{ github.sha }}
-            sed -i 's|image:.*|image: gymappregistryunique99.azurecr.io/gym-membership:${{ github.sha }}|' kube/membership-deploy.yaml
-            kubectl apply -f kube/membership-deploy.yaml
-          fi
+          echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
+
+      - name: Build and Deploy Loop
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+          az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
+          SERVICES=("booking" "membership" "notifier")
+          for SERVICE in "${SERVICES[@]}"; do
+            if [ "${{ github.event_name }}" == "repository_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then
+              docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }} ./src/$SERVICE
+              docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }}
+              sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }}|" kube/$SERVICE-deploy.yaml
+              kubectl apply -f kube/$SERVICE-deploy.yaml
+            fi
+          done
+
+      - name: Trigger Frontend Deployment
+        if: success()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-frontend
+          client-payload: '{"env": "${{ env.DEPLOY_ENV }}"}'

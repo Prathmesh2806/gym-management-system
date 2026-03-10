@@ -15,7 +15,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     type = "SystemAssigned"
   }
 
-  # --- ADDITION: Enable Application Gateway Ingress Controller ---
+  # --Enabled Application Gateway Ingress Controller ---
   ingress_application_gateway {
     gateway_name = "gym-appgw"
     subnet_id    = var.appgw_subnet_id
@@ -29,7 +29,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
-# 1. Get the Identity created by the AGIC Addon
+# 1. Identity created by the AGIC Addon
 data "azurerm_user_assigned_identity" "agic_identity" {
   name                = "ingressapplicationgateway-${var.cluster_name}"
   resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_${var.location}" # Azure's auto-generated RG
@@ -37,9 +37,9 @@ data "azurerm_user_assigned_identity" "agic_identity" {
   depends_on = [azurerm_kubernetes_cluster.aks]
 }
 
-# 2. Assign Network Contributor to the AGIC Identity so it can use the Subnet
+# 2. Assigned Network Contributor to the AGIC Identity so it can use the Subnet
 resource "azurerm_role_assignment" "agic_network_contributor" {
-  scope                = var.vnet_id # We need to pass this variable in!
+  scope                = var.vnet_id 
   role_definition_name = "Network Contributor"
   principal_id         = data.azurerm_user_assigned_identity.agic_identity.principal_id
 }

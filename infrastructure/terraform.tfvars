@@ -7,7 +7,7 @@ vnet_name             = "gym-vnet"
 vnet_address_space    = ["10.0.0.0/16"]
 appgw_subnet_prefix   = ["10.0.2.0/24"]
 
-# Your "2+2+2" Architecture configuration
+# "2+2+2" Architecture configuration
 public_subnet_count   = 2
 app_subnet_count      = 2
 db_subnet_count       = 2

@@ -1,50 +1,41 @@
 name: 3. Deploy Frontend
 on:
-  workflow_run:
-    workflows: ["2. Deploy Backends"]
-    types: [completed]
+  repository_dispatch:
+    types: [deploy-gym-frontend]
   push:
-    branches:
-      - main
-    paths: 
-      - 'src/frontend/**'
-      - 'kube/frontend-deploy.yaml'
-      - 'kube/gym-ingress.yaml' 
+    branches: [main]
+    paths: ['src/frontend/**', 'kube/frontend-deploy.yaml', 'kube/gym-ingress.yaml']
 
 jobs:
   frontend-stage:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Set Environment
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "DEPLOY_ENV=${{ github.event.client_payload.env }}" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+          fi
 
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Set AKS Context
-        uses: azure/aks-set-context@v3
-        with:
-          resource-group: 'gym-app-production-rg' 
-          cluster-name: 'gym-aks-cluster'        
-
-      - name: Build and Push Frontend
+      - name: Set Context
         run: |
-          az acr login --name gymappregistryunique99
-          docker build -t gymappregistryunique99.azurecr.io/gym-frontend:${{ github.sha }} ./src/frontend
-          docker push gymappregistryunique99.azurecr.io/gym-frontend:${{ github.sha }}
+          echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
 
-      - name: Deploy to K8s
+      - name: Build, Push and Deploy
         run: |
-          # Image update kar
-          sed -i 's|image:.*|image: gymappregistryunique99.azurecr.io/gym-frontend:${{ github.sha }}|' kube/frontend-deploy.yaml
-          
-          # Deploy frontend service & deployment
+          az acr login --name ${{ env.ACR_NAME }}
+          az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }} ./src/frontend
+          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}
+          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}|" kube/frontend-deploy.yaml
           kubectl apply -f kube/frontend-deploy.yaml
-          
-          # 2. ATA INGRESS APPLY KAR (Important!)
           kubectl apply -f kube/gym-ingress.yaml
-          
-          # Rollout check
-          kubectl rollout status deployment/gym-frontend --timeout=90s

@@ -38,12 +38,12 @@ resource "azurerm_subnet" "appgw" {
   name                 = "appgw-subnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, 31)] # Using index 31 to avoid any conflicts
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, 31)] 
 }
 
 # --- Security Logic ---
 
-# NSG for App Subnet (Fixes the Timeout)
+# NSG for App Subnet 
 resource "azurerm_network_security_group" "app_nsg" {
   name                = "gym-app-nsg"
   location            = var.location
