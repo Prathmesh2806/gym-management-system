@@ -1,0 +1,77 @@
+name: "Terraform Multi-Env Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment selection (dev/qa/prod/dr)'
+        required: true
+        type: choice
+        options: [dev, qa, prod, dr]
+      action:
+        description: 'Select Action'
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+
+jobs:
+  terraform:
+    name: "Deploying to ${{ github.event.inputs.env }}"
+    runs-on: ubuntu-latest
+    
+    # Environment variables for Azure
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 1: Backend Storage check if not then create
+      - name: Ensure Backend Storage Exists
+        run: |
+          az group create --name "tfstate-mgmt-rg" --location "eastus2"
+          az storage account create --name "gymtfstate${{ github.event.inputs.env }}unique" --resource-group "tfstate-mgmt-rg" --sku Standard_LRS
+          az storage container create --name "tfstate" --account-name "gymtfstate${{ github.event.inputs.env }}unique"
+        continue-on-error: true 
+
+      # Step 2: Terraform Init (Dynamic Backend Config)
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=tfstate-mgmt-rg" \
+            -backend-config="storage_account_name=gymtfstate${{ github.event.inputs.env }}unique" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=terraform.tfstate"
+        working-directory: ./infrastructure
+
+      # Step 3: Terraform Plan
+      - name: Terraform Plan
+        run: |
+          terraform plan -var-file="envs/${{ github.event.inputs.env }}.tfvars" -out=tfplan
+        working-directory: ./infrastructure
+
+      # Step 4: Terraform Apply 
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        run: terraform apply "tfplan"
+        working-directory: ./infrastructure
+
+      # Step 5: Terraform Destroy 
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -var-file="envs/${{ github.event.inputs.env }}.tfvars" -auto-approve
+        working-directory: ./infrastructure

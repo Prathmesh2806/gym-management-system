@@ -83,6 +83,11 @@ variable "dns_service_ip" {
   type = string
 }
 
+variable "env" {
+  type        = string
+  description = "Environment name (dev, qa, prod, dr)"
+}
+
 # --- Storage Settings ---
 variable "storage_account_tier" {
   type        = string

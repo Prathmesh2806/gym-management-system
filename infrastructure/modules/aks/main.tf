@@ -32,7 +32,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 # 1. Get the Identity created by the AGIC Addon
 data "azurerm_user_assigned_identity" "agic_identity" {
   name                = "ingressapplicationgateway-${var.cluster_name}"
-  resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_eastus2" # Azure's auto-generated RG
+  resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_${var.location}" # Azure's auto-generated RG
   
   depends_on = [azurerm_kubernetes_cluster.aks]
 }

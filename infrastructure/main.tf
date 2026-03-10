@@ -1,5 +1,5 @@
 resource "azurerm_resource_group" "gym_rg" {
-  name     = var.resource_group_name
+  name     = "gym-app-${var.env}-rg"
   location = var.location
 }
 
@@ -13,7 +13,7 @@ module "network" {
   source                = "./modules/network"
   resource_group_name   = azurerm_resource_group.gym_rg.name
   location              = azurerm_resource_group.gym_rg.location
-  vnet_name             = var.vnet_name
+  vnet_name             = "gym-${var.env}-vnet"
   vnet_address_space    = var.vnet_address_space
   public_subnet_count   = var.public_subnet_count
   app_subnet_count      = var.app_subnet_count
@@ -30,7 +30,7 @@ module "aks" {
   source              = "./modules/aks"
   resource_group_name = azurerm_resource_group.gym_rg.name
   location            = azurerm_resource_group.gym_rg.location
-  cluster_name        = var.cluster_name
+  cluster_name        = "gym-${var.env}-aks"
   dns_prefix          = var.dns_prefix
   node_count          = var.node_count
   vm_size             = var.vm_size
@@ -45,7 +45,7 @@ module "acr" {
   source              = "./modules/acr"
   resource_group_name = azurerm_resource_group.gym_rg.name
   location            = azurerm_resource_group.gym_rg.location
-  acr_name            = var.acr_name
+  acr_name            = "gymappregistry${var.env}${random_string.suffix.result}"
   aks_principal_id    = module.aks.principal_id
 }
 
