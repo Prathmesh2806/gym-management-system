@@ -72,6 +72,13 @@ jobs:
         run: terraform apply "tfplan"
         working-directory: ./infrastructure
 
+      - name: Get ACR Name
+        id: get_acr
+        run: |
+          ACR_NAME=$(terraform output -raw acr_name)
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+        working-directory: ./infrastructure
+
       # Step: Trigger Application Deployment
       - name: Trigger Database Deployment
         if: github.event.inputs.action == 'apply' && success()
@@ -79,7 +86,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }} 
           event-type: deploy-gym-db
-          client-payload: '{"env": "${{ github.event.inputs.env }}"}'
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
 
       # Step 5: Terraform Destroy 
       - name: Terraform Destroy

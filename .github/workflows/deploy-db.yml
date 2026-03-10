@@ -38,8 +38,12 @@ jobs:
       
       - name: Set Dynamic Names
         run: |
-          # Azure resources chi naave environment pramane automatic badlatil
-          echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "ACR_NAME=${{ github.event.client_payload.acr_name }}" >> $GITHUB_ENV
+          else
+            echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+          fi
+          
           echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
           echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
 
@@ -68,4 +72,4 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-backends 
-          client-payload: '{"env": "${{ env.DEPLOY_ENV }}"}'    
+          client-payload: '{"env": "${{ env.DEPLOY_ENV }}", "acr_name": "${{ env.ACR_NAME }}"}'
