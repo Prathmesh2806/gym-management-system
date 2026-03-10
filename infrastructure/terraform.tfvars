@@ -30,3 +30,4 @@ node_count            = 1
 vm_size               = "Standard_D2s_v3"
 service_cidr          = "10.1.0.0/16"
 dns_service_ip        = "10.1.0.10"
+subscription_id       = "676359b7-4fe4-4523-9a42-97863a95d115"

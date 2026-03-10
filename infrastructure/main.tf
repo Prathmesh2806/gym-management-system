@@ -39,6 +39,7 @@ module "aks" {
   vnet_subnet_id      = module.network.aks_subnet_id 
   appgw_subnet_id     = module.network.appgw_subnet_id
   vnet_id             = module.network.vnet_id
+  subscription_id     = var.subscription_id
 }
 
 module "acr" {

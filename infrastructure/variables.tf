@@ -109,4 +109,9 @@ variable "storage_account_name" {
 
 variable "appgw_subnet_prefix" {
   type = list(string)
-}  
+}
+
+variable "subscription_id" {
+  type        = string
+  description = "Azure Subscription ID"
+}

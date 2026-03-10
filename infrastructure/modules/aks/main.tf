@@ -32,9 +32,15 @@ resource "azurerm_kubernetes_cluster" "aks" {
 # 1. Identity created by the AGIC Addon
 data "azurerm_user_assigned_identity" "agic_identity" {
   name                = "ingressapplicationgateway-${var.cluster_name}"
-  resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_${var.location}" # Azure's auto-generated RG
+  resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_${var.location}" 
   
   depends_on = [azurerm_kubernetes_cluster.aks]
+}
+
+resource "azurerm_role_assignment" "agic_rg_reader" {
+  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
+  role_definition_name = "Reader"
+  principal_id         = data.azurerm_user_assigned_identity.agic_identity.principal_id
 }
 
 # 2. Assigned Network Contributor to the AGIC Identity so it can use the Subnet
@@ -42,4 +48,13 @@ resource "azurerm_role_assignment" "agic_network_contributor" {
   scope                = var.vnet_id 
   role_definition_name = "Network Contributor"
   principal_id         = data.azurerm_user_assigned_identity.agic_identity.principal_id
+}
+
+# Application Gateway 
+resource "azurerm_role_assignment" "agic_appgw_contributor" {
+  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Network/applicationGateways/gym-appgw"
+  role_definition_name = "Contributor"
+  principal_id         = data.azurerm_user_assigned_identity.agic_identity.principal_id
+
+  depends_on = [azurerm_kubernetes_cluster.aks]
 }
