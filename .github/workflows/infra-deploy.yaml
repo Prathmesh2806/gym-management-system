@@ -121,8 +121,9 @@ jobs:
         run: |
           IP_ADDR=$(echo "${{ steps.get_outputs.outputs.public_ip }}" | tr -d '\r' | tr -d '\n' | xargs)
           TOKEN=$(echo "${{ secrets.DUCKDNS_TOKEN }}" | tr -d '\r' | tr -d '\n' | xargs)
-          echo "Updating the-fitness-arena.duckdns.org to point to $IP_ADDR..."
-          curl -v "https://www.duckdns.org/update?domains=the-fitness-arena&token=$TOKEN&ip=$IP_ADDR"
+          DOMAIN="the-fitness-arena-${{ github.event.inputs.env }}"
+          echo "Updating $DOMAIN.duckdns.org to point to $IP_ADDR..."
+          curl -v "https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&ip=$IP_ADDR"
 
       # Step: Trigger Application Deployment
       - name: Trigger Database Deployment
