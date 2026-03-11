@@ -99,8 +99,10 @@ jobs:
       - name: Update DuckDNS Domain
         if: github.event.inputs.action == 'apply' && success()
         run: |
-          echo "Updating the-fitness-arena.duckdns.org to point to ${{ steps.get_outputs.outputs.public_ip }}..."
-          curl "https://www.duckdns.org/update?domains=the-fitness-arena&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.get_outputs.outputs.public_ip }}"
+          IP_ADDR=$(echo "${{ steps.get_outputs.outputs.public_ip }}" | tr -d '\r' | tr -d '\n' | xargs)
+          TOKEN=$(echo "${{ secrets.DUCKDNS_TOKEN }}" | tr -d '\r' | tr -d '\n' | xargs)
+          echo "Updating the-fitness-arena.duckdns.org to point to $IP_ADDR..."
+          curl -v "https://www.duckdns.org/update?domains=the-fitness-arena&token=$TOKEN&ip=$IP_ADDR"
 
       # Step: Trigger Application Deployment
       - name: Trigger Database Deployment
