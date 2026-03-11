@@ -127,7 +127,8 @@ resource "azurerm_application_gateway" "appgw" {
       request_routing_rule,
       probe,
       tags,
-      frontend_port
+      frontend_port,
+      ssl_certificate
     ]
   }
 }
