@@ -17,8 +17,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   # --Enabled Application Gateway Ingress Controller ---
   ingress_application_gateway {
-    gateway_name = "gym-appgw"
-    subnet_id    = var.appgw_subnet_id
+    gateway_id = var.app_gateway_id
   }
 
   network_profile {
@@ -52,7 +51,7 @@ resource "azurerm_role_assignment" "agic_network_contributor" {
 
 # Application Gateway 
 resource "azurerm_role_assignment" "agic_appgw_contributor" {
-  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Network/applicationGateways/gym-appgw"
+  scope                = var.app_gateway_id
   role_definition_name = "Contributor"
   principal_id         = data.azurerm_user_assigned_identity.agic_identity.principal_id
 

@@ -15,7 +15,7 @@ services:
     volumes:
       - gym-data:/var/lib/mysql
       # Path check: ensure init.sql is in src/db
-      - ../src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgymrootpass"]
@@ -26,7 +26,7 @@ services:
 
   # ── Notification Service ────────────────────────────────────────────
   gym-notifier:
-    build: ../src/gym-notifier
+    build: ../src/notifier
     container_name: gym-notifier
     ports:
       - "4003:4003"
@@ -50,7 +50,7 @@ services:
 
   # ── Booking Service ─────────────────────────────────────────────────
   gym-booking:
-    build: ../src/gym-booking
+    build: ../src/booking
     container_name: gym-booking
     ports:
       - "4001:4001"
@@ -77,7 +77,7 @@ services:
 
   # ── Membership Service ──────────────────────────────────────────────
   gym-membership:
-    build: ../src/gym-membership
+    build: ../src/membership
     container_name: gym-membership
     ports:
       - "4002:4002"
@@ -104,7 +104,7 @@ services:
 
   # ── Frontend ─────────────────────
   gym-frontend:
-    build: ../src/gym-frontend
+    build: ../src/frontend
     container_name: gym-frontend
     ports:
       - "3000:80"

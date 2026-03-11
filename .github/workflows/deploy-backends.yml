@@ -40,6 +40,7 @@ jobs:
 
       - name: Build and Deploy Loop
         run: |
+          rm -f ~/.kube/config
           az acr login --name ${{ env.ACR_NAME }}
           az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
           SERVICES=("booking" "membership" "notifier")

@@ -37,10 +37,12 @@ jobs:
           
       - name: Build, Push and Deploy
         run: |
+          rm -f ~/.kube/config
           az acr login --name ${{ env.ACR_NAME }}
           az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
           docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }} ./src/frontend
           docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}
+          kubectl create secret tls the-fitness-arena-tls --cert=gym-tls.crt --key=gym-tls.key --dry-run=client -o yaml | kubectl apply -f -
           sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}|" kube/frontend-deploy.yaml
           kubectl apply -f kube/frontend-deploy.yaml
           kubectl apply -f kube/gym-ingress.yaml

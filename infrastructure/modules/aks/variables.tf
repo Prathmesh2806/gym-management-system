@@ -26,7 +26,7 @@ variable "vnet_subnet_id" {
   type = string
 }
 
-variable "appgw_subnet_id" {
+variable "app_gateway_id" {
   type = string
 }
 

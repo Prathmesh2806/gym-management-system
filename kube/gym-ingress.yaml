@@ -10,7 +10,7 @@ spec:
   tls:
   - hosts:
     - the-fitness-arena.duckdns.org
-    secretName: the-fitness-arena.duckdns.org-tls
+    secretName: the-fitness-arena-tls
   rules:
   - host: the-fitness-arena.duckdns.org
     http:
