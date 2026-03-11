@@ -50,8 +50,10 @@ jobs:
       - name: Build and Push DB Image
         run: |
           az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-db:${{ github.sha }} ./src/db
-          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-db:${{ github.sha }}
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          echo "IMAGE_TAG=gym-db-$SHORT_SHA" >> $GITHUB_ENV
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-db:$SHORT_SHA ./src/db
+          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-db:$SHORT_SHA
 
       - name: Clean Kubeconfig
         run: rm -f ~/.kube/config
@@ -65,14 +67,8 @@ jobs:
       - name: Deploy to K8s
         run: |
           # Image naav YAML madhye dynamic update karne
-          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-db:${{ github.sha }}|" kube/db-deploy.yaml
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-db:$SHORT_SHA|" kube/db-deploy.yaml
           kubectl apply -f kube/db-deploy.yaml
           kubectl rollout status deployment/gym-db --timeout=120s
 
-      - name: Trigger Backend Deployment
-        if: success()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT_TOKEN }}
-          event-type: deploy-gym-backends 
-          client-payload: '{"env": "${{ env.DEPLOY_ENV }}", "acr_name": "${{ env.ACR_NAME }}"}'

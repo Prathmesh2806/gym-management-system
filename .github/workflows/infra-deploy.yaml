@@ -13,6 +13,18 @@ on:
         required: true
         type: choice
         options: [plan, apply, destroy]
+      deploy_db:
+        description: 'Deploy Database after Infra?'
+        type: boolean
+        default: true
+      deploy_backends:
+        description: 'Deploy Backends after Infra?'
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: 'Deploy Frontend after Infra?'
+        type: boolean
+        default: true
 
 jobs:
   terraform:
@@ -82,11 +94,27 @@ jobs:
 
       # Step: Trigger Application Deployment
       - name: Trigger Database Deployment
-        if: github.event.inputs.action == 'apply' && success()
+        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_db == 'true' && success()
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.GH_PAT_TOKEN }} 
           event-type: deploy-gym-db
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
+
+      - name: Trigger Backend Deployment
+        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_backends == 'true' && success()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-backends
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
+
+      - name: Trigger Frontend Deployment
+        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_frontend == 'true' && success()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-frontend
           client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
 
       # Step 5: Terraform Destroy 

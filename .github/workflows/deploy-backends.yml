@@ -43,20 +43,14 @@ jobs:
           rm -f ~/.kube/config
           az acr login --name ${{ env.ACR_NAME }}
           az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
           SERVICES=("booking" "membership" "notifier")
           for SERVICE in "${SERVICES[@]}"; do
             if [ "${{ github.event_name }}" == "repository_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then
-              docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }} ./src/$SERVICE
-              docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }}
-              sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ github.sha }}|" kube/$SERVICE-deploy.yaml
+              docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$SHORT_SHA ./src/$SERVICE
+              docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$SHORT_SHA
+              sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$SHORT_SHA|" kube/$SERVICE-deploy.yaml
               kubectl apply -f kube/$SERVICE-deploy.yaml
             fi
           done
 
-      - name: Trigger Frontend Deployment
-        if: success()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT_TOKEN }}
-          event-type: deploy-gym-frontend
-          client-payload: '{"env": "${{ env.DEPLOY_ENV }}", "acr_name": "${{ env.ACR_NAME }}"}'

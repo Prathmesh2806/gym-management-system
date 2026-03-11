@@ -49,8 +49,9 @@ jobs:
           # Apply the ClusterIssuer
           kubectl apply -f kube/cluster-issuer.yaml
           
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }} ./src/frontend
-          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}
-          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:${{ github.sha }}|" kube/frontend-deploy.yaml
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA ./src/frontend
+          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA
+          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA|" kube/frontend-deploy.yaml
           kubectl apply -f kube/frontend-deploy.yaml
           kubectl apply -f kube/gym-ingress.yaml
