@@ -66,5 +66,11 @@ jobs:
           fi
           
           sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG|" kube/frontend-deploy.yaml
+          
+          # Inject Environment Specific Hostname back into Ingress (Both host and TLS section)
+          DOMAIN="the-fitness-arena-${{ env.DEPLOY_ENV }}.duckdns.org"
+          echo "Updating Ingress host and TLS to $DOMAIN..."
+          sed -i "s|the-fitness-arena.duckdns.org|$DOMAIN|g" kube/gym-ingress.yaml
+          
           kubectl apply -f kube/frontend-deploy.yaml
           kubectl apply -f kube/gym-ingress.yaml
