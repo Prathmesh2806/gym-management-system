@@ -15,8 +15,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             echo "DEPLOY_ENV=${{ github.event.client_payload.env }}" >> $GITHUB_ENV
+            echo "PROMOTE_TAG=${{ github.event.client_payload.promote_tag }}" >> $GITHUB_ENV
           else
             echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+            echo "PROMOTE_TAG=" >> $GITHUB_ENV
           fi
 
       - name: Azure Login
@@ -34,6 +36,7 @@ jobs:
           
           echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
           echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
+          echo "DEV_ACR_NAME=gymappregdevunique" >> $GITHUB_ENV
           
       - name: Build, Push and Deploy
         run: |
@@ -50,8 +53,18 @@ jobs:
           kubectl apply -f kube/cluster-issuer.yaml
           
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA ./src/frontend
-          docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA
-          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$SHORT_SHA|" kube/frontend-deploy.yaml
+          
+          if [ -n "$PROMOTE_TAG" ] && [ "${{ env.DEPLOY_ENV }}" != "dev" ]; then
+            echo "Promoting frontend with tag $PROMOTE_TAG from Dev ACR..."
+            az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-frontend:$PROMOTE_TAG --image gym-frontend:$PROMOTE_TAG --force
+            FINAL_TAG=$PROMOTE_TAG
+          else
+            echo "Building fresh frontend image..."
+            FINAL_TAG="frontend-$SHORT_SHA"
+            docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG ./src/frontend
+            docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG
+          fi
+          
+          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG|" kube/frontend-deploy.yaml
           kubectl apply -f kube/frontend-deploy.yaml
           kubectl apply -f kube/gym-ingress.yaml
