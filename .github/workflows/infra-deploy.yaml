@@ -85,12 +85,22 @@ jobs:
         run: terraform apply "tfplan"
         working-directory: ./infrastructure
 
-      - name: Get ACR Name
-        id: get_acr
+      - name: Get ACR Name and Public IP
+        id: get_outputs
         run: |
           ACR_NAME=$(terraform output -raw acr_name)
           echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+          
+          # Fetch the Public IP address of the App Gateway
+          PUBLIC_IP=$(az network public-ip show --resource-group "tfstate-mgmt-rg" --name "gym-appgw-pip-${{ github.event.inputs.env }}" --query ipAddress -o tsv)
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
         working-directory: ./infrastructure
+
+      - name: Update DuckDNS Domain
+        if: github.event.inputs.action == 'apply' && success()
+        run: |
+          echo "Updating the-fitness-arena.duckdns.org to point to ${{ steps.get_outputs.outputs.public_ip }}..."
+          curl "https://www.duckdns.org/update?domains=the-fitness-arena&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${{ steps.get_outputs.outputs.public_ip }}"
 
       # Step: Trigger Application Deployment
       - name: Trigger Database Deployment
@@ -99,7 +109,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }} 
           event-type: deploy-gym-db
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}"}'
 
       - name: Trigger Backend Deployment
         if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_backends == 'true' && success()
@@ -107,7 +117,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-backends
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}"}'
 
       - name: Trigger Frontend Deployment
         if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_frontend == 'true' && success()
@@ -115,7 +125,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-frontend
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_acr.outputs.acr_name }}"}'
+          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}"}'
 
       # Step 5: Terraform Destroy 
       - name: Terraform Destroy
