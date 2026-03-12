@@ -3,9 +3,25 @@ name: "QA Application Deployment"
 on:
   workflow_dispatch:
     inputs:
-      commit_id:
-        description: 'Commit ID / Tag from Dev ACR to deploy'
-        required: true
+      db_tag:
+        description: 'Database Tag from Dev ACR'
+        required: false
+        type: string
+      booking_tag:
+        description: 'Booking Tag from Dev ACR'
+        required: false
+        type: string
+      membership_tag:
+        description: 'Membership Tag from Dev ACR'
+        required: false
+        type: string
+      notifier_tag:
+        description: 'Notifier Tag from Dev ACR'
+        required: false
+        type: string
+      frontend_tag:
+        description: 'Frontend Tag from Dev ACR'
+        required: false
         type: string
       deploy_db:
         description: 'Deploy Database?'
@@ -48,7 +64,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-db
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.commit_id }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.db_tag }}"}'
 
       - name: Trigger Backend Deployment
         if: github.event.inputs.deploy_backends == 'true'
@@ -56,7 +72,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-backends
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "booking_promote_tag": "${{ github.event.inputs.commit_id }}", "membership_promote_tag": "${{ github.event.inputs.commit_id }}", "notifier_promote_tag": "${{ github.event.inputs.commit_id }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "booking_promote_tag": "${{ github.event.inputs.booking_tag }}", "membership_promote_tag": "${{ github.event.inputs.membership_tag }}", "notifier_promote_tag": "${{ github.event.inputs.notifier_tag }}"}'
 
       - name: Trigger Frontend Deployment
         if: github.event.inputs.deploy_frontend == 'true'
@@ -64,4 +80,4 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-frontend
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.commit_id }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.frontend_tag }}"}'
