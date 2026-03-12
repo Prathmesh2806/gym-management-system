@@ -18,6 +18,7 @@ data "azurerm_virtual_network" "vnet_data" {
 
 locals {
   vnet_name = var.create_shared_resources ? azurerm_virtual_network.vnet[0].name : data.azurerm_virtual_network.vnet_data[0].name
+  vnet_id   = var.create_shared_resources ? azurerm_virtual_network.vnet[0].id : data.azurerm_virtual_network.vnet_data[0].id
 }
 
 # --- NAT Gateway (Shared Outbound) ---

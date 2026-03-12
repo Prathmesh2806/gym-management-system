@@ -20,7 +20,7 @@ output "db_subnet_ids" {
 # 5. VNet ID 
 output "vnet_id" {
   description = "The ID of the Virtual Network"
-  value       = azurerm_virtual_network.vnet.id
+  value       = local.vnet_id
 }
 
 output "aks_subnet_id" {
