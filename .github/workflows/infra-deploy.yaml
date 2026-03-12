@@ -110,6 +110,7 @@ jobs:
         working-directory: ./infrastructure
 
       - name: Get ACR Name and Public IP
+        if: github.event.inputs.action == 'apply'
         id: get_outputs
         run: |
           ACR_NAME=$(terraform output -raw acr_name)
