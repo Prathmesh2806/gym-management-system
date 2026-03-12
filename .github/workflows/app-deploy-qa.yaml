@@ -1,0 +1,67 @@
+name: "QA Application Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_id:
+        description: 'Commit ID / Tag from Dev ACR to deploy'
+        required: true
+        type: string
+      deploy_db:
+        description: 'Deploy Database?'
+        type: boolean
+        default: true
+      deploy_backends:
+        description: 'Deploy Backends?'
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: 'Deploy Frontend?'
+        type: boolean
+        default: true
+
+jobs:
+  orchestrate:
+    name: "Deploying App to QA"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve ACR Name
+        id: resolve
+        run: |
+          RG_NAME="gym-app-qa-rg"
+          ACR_NAME=$(az acr list --resource-group "$RG_NAME" --query "[0].name" -o tsv)
+          if [ -z "$ACR_NAME" ]; then
+            echo "Error: No ACR found in $RG_NAME"
+            exit 1
+          fi
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "Found ACR: $ACR_NAME"
+
+      - name: Trigger Database Deployment
+        if: github.event.inputs.deploy_db == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-db
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.commit_id }}"}'
+
+      - name: Trigger Backend Deployment
+        if: github.event.inputs.deploy_backends == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-backends
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "booking_promote_tag": "${{ github.event.inputs.commit_id }}", "membership_promote_tag": "${{ github.event.inputs.commit_id }}", "notifier_promote_tag": "${{ github.event.inputs.commit_id }}"}'
+
+      - name: Trigger Frontend Deployment
+        if: github.event.inputs.deploy_frontend == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_PAT_TOKEN }}
+          event-type: deploy-gym-frontend
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.commit_id }}"}'

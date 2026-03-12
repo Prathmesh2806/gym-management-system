@@ -13,38 +13,6 @@ on:
         required: true
         type: choice
         options: [plan, apply, destroy]
-      deploy_db:
-        description: 'Deploy Database after Infra?'
-        type: boolean
-        default: true
-      deploy_backends:
-        description: 'Deploy Backends after Infra?'
-        type: boolean
-        default: true
-      deploy_frontend:
-        description: 'Deploy Frontend after Infra?'
-        type: boolean
-        default: true
-      db_promote_tag:
-        description: 'Tag to promote for Database (Leave empty to build fresh)'
-        type: string
-        required: false
-      booking_promote_tag:
-        description: 'Tag to promote for Booking (Leave empty to build fresh)'
-        type: string
-        required: false
-      membership_promote_tag:
-        description: 'Tag to promote for Membership (Leave empty to build fresh)'
-        type: string
-        required: false
-      notifier_promote_tag:
-        description: 'Tag to promote for Notifier (Leave empty to build fresh)'
-        type: string
-        required: false
-      frontend_promote_tag:
-        description: 'Tag to promote for Frontend (Leave empty to build fresh)'
-        type: string
-        required: false
 
 jobs:
   terraform:
@@ -130,32 +98,6 @@ jobs:
           echo "Updating $DOMAIN.duckdns.org to point to $IP_ADDR..."
           curl -v "https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&ip=$IP_ADDR"
 
-      # Step: Trigger Application Deployment
-      - name: Trigger Database Deployment
-        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_db == 'true' && success()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT_TOKEN }} 
-          event-type: deploy-gym-db
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.db_promote_tag }}"}'
-
-      - name: Trigger Backend Deployment
-        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_backends == 'true' && success()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT_TOKEN }}
-          event-type: deploy-gym-backends
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}", "booking_promote_tag": "${{ github.event.inputs.booking_promote_tag }}", "membership_promote_tag": "${{ github.event.inputs.membership_promote_tag }}", "notifier_promote_tag": "${{ github.event.inputs.notifier_promote_tag }}"}'
-
-      - name: Trigger Frontend Deployment
-        if: github.event.inputs.action == 'apply' && github.event.inputs.deploy_frontend == 'true' && success()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT_TOKEN }}
-          event-type: deploy-gym-frontend
-          client-payload: '{"env": "${{ github.event.inputs.env }}" , "acr_name": "${{ steps.get_outputs.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.frontend_promote_tag }}"}'
-
-      # Step 5: Terraform Destroy 
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: |
