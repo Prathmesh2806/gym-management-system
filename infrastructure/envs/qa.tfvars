@@ -4,8 +4,8 @@ location             = "eastus2"
 node_count           = 1
 vm_size              = "Standard_D2s_v3"
 
-vnet_address_space   = ["10.10.0.0/16"] # IP overlap will not happen
-appgw_subnet_prefix  = ["10.10.2.0/24"]
+vnet_address_space   = ["10.0.0.0/16"]
+appgw_subnet_prefix  = ["10.0.2.0/24"]
 
 public_subnet_count  = 2
 app_subnet_count     = 2

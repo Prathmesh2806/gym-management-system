@@ -58,6 +58,16 @@ data "azurerm_nat_gateway" "nat_data" {
 
 locals {
   nat_gateway_id = var.create_shared_resources ? azurerm_nat_gateway.nat_gw[0].id : data.azurerm_nat_gateway.nat_data[0].id
+
+  # Dynamic offset based on environment to prevent overlap in Shared VNet
+  # Each env gets 50 indices (~12,800 IPs)
+  env_offsets = {
+    "dev"  = 0
+    "qa"   = 50
+    "prod" = 100
+    "dr"   = 150
+  }
+  offset = lookup(local.env_offsets, var.env, 0)
 }
 
 # --- Subnets (Always created per environment) ---
@@ -68,7 +78,7 @@ resource "azurerm_subnet" "public" {
   name                 = "${var.public_subnet_prefix}-${var.env}-${count.index + 1}"
   resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + (var.env == "qa" ? 50 : 1))]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 1 + local.offset)]
 }
 
 # Private App Subnets (Where AKS Lives)
@@ -77,7 +87,7 @@ resource "azurerm_subnet" "app" {
   name                 = "${var.app_subnet_prefix}-${var.env}-${count.index + 1}"
   resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + (var.env == "qa" ? 60 : 11))]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 11 + local.offset)]
   service_endpoints    = var.app_service_endpoints
 }
 
@@ -94,7 +104,7 @@ resource "azurerm_subnet" "db" {
   name                 = "${var.db_subnet_prefix}-${var.env}-${count.index + 1}"
   resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + (var.env == "qa" ? 70 : 21))]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 21 + local.offset)]
 }
 
 # Subnet for Application Gateway
@@ -102,7 +112,7 @@ resource "azurerm_subnet" "appgw" {
   name                 = "appgw-subnet-${var.env}"
   resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, (var.env == "qa" ? 81 : 31))] 
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, 31 + local.offset)] 
 }
 
 # --- Security Logic ---
