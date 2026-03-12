@@ -1,6 +1,7 @@
 resource "azurerm_resource_group" "gym_rg" {
   name     = "gym-app-${var.env}-rg"
   location = var.location
+  tags     = var.tags
 }
 
 resource "random_string" "suffix" {
@@ -24,6 +25,9 @@ module "network" {
   app_service_endpoints = var.app_service_endpoints
   db_nsg_name           = var.db_nsg_name
   db_port               = var.db_port
+  env                   = var.env
+  create_shared_resources = var.env == "dev"
+  tags                 = var.tags
 }
 
 module "aks" {
@@ -40,6 +44,7 @@ module "aks" {
   app_gateway_id      = azurerm_application_gateway.appgw.id
   vnet_id             = module.network.vnet_id
   subscription_id     = var.subscription_id
+  tags                = var.tags
 }
 
 module "acr" {
@@ -48,6 +53,7 @@ module "acr" {
   location            = azurerm_resource_group.gym_rg.location
   acr_name            = "gymappregistry${var.env}${random_string.suffix.result}"
   aks_principal_id    = module.aks.principal_id
+  tags                = var.tags
 }
 
 data "azurerm_public_ip" "appgw_pip" {
@@ -59,6 +65,7 @@ resource "azurerm_application_gateway" "appgw" {
   name                = "gym-${var.env}-appgw"
   resource_group_name = azurerm_resource_group.gym_rg.name
   location            = azurerm_resource_group.gym_rg.location
+  tags                = var.tags
 
   sku {
     name     = "Standard_v2"

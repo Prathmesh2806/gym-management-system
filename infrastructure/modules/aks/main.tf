@@ -3,6 +3,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   location            = var.location
   resource_group_name = var.resource_group_name
   dns_prefix          = var.dns_prefix
+  tags                = var.tags
 
   default_node_pool {
     name           = "default"
@@ -23,6 +24,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   network_profile {
     network_plugin     = "azure"
     load_balancer_sku  = "standard"
+    outbound_type      = "userAssignedNATGateway"
     service_cidr       = var.service_cidr
     dns_service_ip     = var.dns_service_ip
   }

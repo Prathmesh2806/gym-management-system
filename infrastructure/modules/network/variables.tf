@@ -6,6 +6,10 @@ variable "location" {
   type = string
 }
 
+variable "env" {
+  type = string
+}
+
 variable "vnet_name" {
   type = string
 }
@@ -48,4 +52,15 @@ variable "db_nsg_name" {
 
 variable "db_port" {
   type = string
+}
+
+variable "create_shared_resources" {
+  type        = bool
+  description = "Whether to create the VNet and NAT Gateway (true for dev, false for others)"
+  default     = true
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "A mapping of tags to assign to the resources"
 }

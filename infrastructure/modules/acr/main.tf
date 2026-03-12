@@ -4,6 +4,7 @@ resource "azurerm_container_registry" "acr" {
   location            = var.location
   sku                 = "Basic"
   admin_enabled       = false
+  tags                = var.tags
 }
 
 resource "azurerm_role_assignment" "aks_to_acr" {

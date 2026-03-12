@@ -1,15 +1,20 @@
 variable "resource_group_name" {
-type = string
+  type = string
 }
 
 variable "location" {
-type = string
+  type = string
 }
 
 variable "acr_name" {
-type = string
+  type = string
 }
 
 variable "aks_principal_id" {
-type = string
+  type = string
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "A mapping of tags to assign to the resources"
 }

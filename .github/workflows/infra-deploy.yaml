@@ -93,8 +93,10 @@ jobs:
       # Step 3: Terraform Plan 
       - name: Terraform Plan
         run: |
+          TAGS='{"project"="gym-management", "environment"="${{ github.event.inputs.env }}", "managed_by"="terraform"}'
           terraform plan \
             -var="env=${{ github.event.inputs.env }}" \
+            -var="tags=$TAGS" \
             -var-file="envs/${{ github.event.inputs.env }}.tfvars" \
             -out=tfplan
         working-directory: ./infrastructure
@@ -102,7 +104,9 @@ jobs:
       # Step 4: Terraform Apply 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
-        run: terraform apply "tfplan"
+        run: |
+          TAGS='{"project"="gym-management", "environment"="${{ github.event.inputs.env }}", "managed_by"="terraform"}'
+          terraform apply -var="tags=$TAGS" "tfplan"
         working-directory: ./infrastructure
 
       - name: Get ACR Name and Public IP

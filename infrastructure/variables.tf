@@ -115,3 +115,9 @@ variable "subscription_id" {
   type        = string
   description = "Azure Subscription ID"
 }
+
+variable "tags" {
+  type        = map(string)
+  description = "A mapping of tags to assign to the resources"
+  default     = {}
+}
