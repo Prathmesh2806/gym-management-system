@@ -46,17 +46,29 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Resolve ACR Name
+      - name: Resolve ACR Names
         id: resolve
         run: |
-          RG_NAME="gym-app-qa-rg"
-          ACR_NAME=$(az acr list --resource-group "$RG_NAME" --query "[0].name" -o tsv)
-          if [ -z "$ACR_NAME" ]; then
-            echo "Error: No ACR found in $RG_NAME"
+          # Resolve QA ACR (Target)
+          QA_RG="gym-app-qa-rg"
+          QA_ACR=$(az acr list --resource-group "$QA_RG" --query "[0].name" -o tsv)
+          if [ -z "$QA_ACR" ]; then
+            echo "Error: No ACR found in $QA_RG"
             exit 1
           fi
-          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
-          echo "Found ACR: $ACR_NAME"
+          echo "acr_name=$QA_ACR" >> $GITHUB_OUTPUT
+          
+          # Resolve Dev ACR (Source for promotion)
+          DEV_RG="gym-app-dev-rg"
+          DEV_ACR=$(az acr list --resource-group "$DEV_RG" --query "[0].name" -o tsv)
+          if [ -z "$DEV_ACR" ]; then
+            echo "Error: No ACR found in $DEV_RG"
+            exit 1
+          fi
+          echo "dev_acr_name=$DEV_ACR" >> $GITHUB_OUTPUT
+          
+          echo "Found QA ACR: $QA_ACR"
+          echo "Found Dev ACR: $DEV_ACR"
 
       - name: Trigger Database Deployment
         if: github.event.inputs.deploy_db == 'true'
@@ -64,7 +76,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-db
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.db_tag }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "source_acr_name": "${{ steps.resolve.outputs.dev_acr_name }}", "promote_tag": "${{ github.event.inputs.db_tag }}"}'
 
       - name: Trigger Backend Deployment
         if: github.event.inputs.deploy_backends == 'true'
@@ -72,7 +84,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-backends
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "booking_promote_tag": "${{ github.event.inputs.booking_tag }}", "membership_promote_tag": "${{ github.event.inputs.membership_tag }}", "notifier_promote_tag": "${{ github.event.inputs.notifier_tag }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "source_acr_name": "${{ steps.resolve.outputs.dev_acr_name }}", "booking_promote_tag": "${{ github.event.inputs.booking_tag }}", "membership_promote_tag": "${{ github.event.inputs.membership_tag }}", "notifier_promote_tag": "${{ github.event.inputs.notifier_tag }}"}'
 
       - name: Trigger Frontend Deployment
         if: github.event.inputs.deploy_frontend == 'true'
@@ -80,4 +92,4 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
           event-type: deploy-gym-frontend
-          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "promote_tag": "${{ github.event.inputs.frontend_tag }}"}'
+          client-payload: '{"env": "qa", "acr_name": "${{ steps.resolve.outputs.acr_name }}", "source_acr_name": "${{ steps.resolve.outputs.dev_acr_name }}", "promote_tag": "${{ github.event.inputs.frontend_tag }}"}'

@@ -41,14 +41,21 @@ jobs:
           if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             echo "ACR_NAME=${{ github.event.client_payload.acr_name }}" >> $GITHUB_ENV
             echo "PROMOTE_TAG=${{ github.event.client_payload.promote_tag }}" >> $GITHUB_ENV
+            
+            # Use source_acr_name from payload if it exists (for dynamic lookup)
+            if [ -n "${{ github.event.client_payload.source_acr_name }}" ]; then
+              echo "DEV_ACR_NAME=${{ github.event.client_payload.source_acr_name }}" >> $GITHUB_ENV
+            else
+              echo "DEV_ACR_NAME=gymappregdevunique" >> $GITHUB_ENV
+            fi
           else
             echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
             echo "PROMOTE_TAG=" >> $GITHUB_ENV
+            echo "DEV_ACR_NAME=gymappregdevunique" >> $GITHUB_ENV
           fi
           
           echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
           echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
-          echo "DEV_ACR_NAME=gymappregdevunique" >> $GITHUB_ENV
 
       - name: Build and Push DB Image
         run: |
