@@ -14,7 +14,7 @@ module "network" {
   source                = "./modules/network"
   resource_group_name   = azurerm_resource_group.gym_rg.name
   location              = azurerm_resource_group.gym_rg.location
-  vnet_name             = "gym-${var.env}-vnet"
+  vnet_name             = "gym-shared-vnet"
   vnet_address_space    = var.vnet_address_space
   public_subnet_count   = var.public_subnet_count
   app_subnet_count      = var.app_subnet_count

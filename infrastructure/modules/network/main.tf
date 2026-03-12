@@ -12,8 +12,8 @@ resource "azurerm_virtual_network" "vnet" {
 # If we are NOT creating shared resources, we need to fetch the existing VNet
 data "azurerm_virtual_network" "vnet_data" {
   count               = var.create_shared_resources ? 0 : 1
-  name                = var.vnet_name
-  resource_group_name = "gym-app-dev-rg" # Anchor to dev for now
+  name                = "gym-shared-vnet"
+  resource_group_name = "gym-app-dev-rg" # Anchor to dev
 }
 
 locals {
