@@ -10,10 +10,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - the-fitness-arena.duckdns.org
-    secretName: the-fitness-arena-tls
+    - __DOMAIN__
+    secretName: __TLS_SECRET__
   rules:
-  - host: the-fitness-arena.duckdns.org
+  - host: __DOMAIN__
     http:
       paths:
       - path: /
