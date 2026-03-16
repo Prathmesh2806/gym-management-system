@@ -119,14 +119,13 @@ jobs:
 
       # --- Database Section ---
       - name: Deploy Database
-        if: github.event_name == 'push' || github.event.inputs.deploy_db == true || github.event_name == 'repository_dispatch'
+        if: github.event_name == 'push' || github.event.inputs.deploy_db == true || github.event.inputs.deploy_db == 'true' || github.event_name == 'repository_dispatch'
         run: |
           SERVICE="db"
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
           BUILD_REQUIRED=false
           DEPLOY_REQUIRED=false
           
-          # Determine if deployment or build is needed
           if [ "${{ github.event_name }}" == "push" ]; then
             if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE" || git diff --name-only HEAD^ HEAD | grep -q "kube/$SERVICE-deploy.yaml"; then
               DEPLOY_REQUIRED=true
@@ -136,13 +135,8 @@ jobs:
             # For workflow_dispatch and repository_dispatch
             DEPLOY_REQUIRED=true
             if [ -z "${{ env.DB_PROMOTE }}" ]; then
-              # If no tag provided, check for changes to decide if we build fresh
-              # If we can't find changes, we still deploy the current YAML state
-              if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then 
-                BUILD_REQUIRED=true
-              else
-                echo "No changes detected in src/$SERVICE since last commit. Skipping fresh build."
-              fi
+              # For manual runs, we ALWAYS build if no tag is provided, to ensure image exists in this ACR
+              BUILD_REQUIRED=true
             fi
           fi
 
@@ -206,13 +200,10 @@ jobs:
                   if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then BUILD_REQUIRED=true; fi
                 fi
               else
+                # For manual runs, we ALWAYS build if no tag is provided, to ensure image exists in this ACR
                 DEPLOY_REQUIRED=true
                 if [ -z "$PROMOTE_TAG" ]; then
-                  if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then
-                    BUILD_REQUIRED=true
-                  else
-                    echo "No changes detected in src/$SERVICE since last commit. Skipping fresh build."
-                  fi
+                  BUILD_REQUIRED=true
                 fi
               fi
 
@@ -260,10 +251,13 @@ jobs:
               if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then BUILD_REQUIRED=true; fi
             fi
           else
+            # For manual runs, we ALWAYS build if no tag is provided, to ensure image exists in this ACR
             DEPLOY_REQUIRED=true
-            if [ -z "${{ env.FRONTEND_PROMOTE }}" ]; then BUILD_REQUIRED=true; fi
+            if [ -z "${{ env.FRONTEND_PROMOTE }}" ]; then
+              BUILD_REQUIRED=true
+            fi
           fi
-
+          
           if [ "$DEPLOY_REQUIRED" == "true" ]; then
             # Always update the registry hostname in the YAML to match the current environment
             echo "Updating ACR registry prefix in kube/$SERVICE-deploy.yaml to ${{ env.ACR_NAME }}..."
