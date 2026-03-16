@@ -6,7 +6,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   tags                = var.tags
 
   default_node_pool {
-    name           = "default"
+    name           = var.node_pool_name
     node_count     = var.node_count
     vm_size        = var.vm_size
     vnet_subnet_id = var.vnet_subnet_id
@@ -22,9 +22,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   network_profile {
-    network_plugin     = "azure"
-    load_balancer_sku  = "standard"
-    outbound_type      = "userAssignedNATGateway"
+    network_plugin     = var.network_plugin
+    load_balancer_sku  = var.load_balancer_sku
+    outbound_type      = var.outbound_type
     service_cidr       = var.service_cidr
     dns_service_ip     = var.dns_service_ip
   }
@@ -32,7 +32,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
 # 1. Identity created by the AGIC Addon
 data "azurerm_user_assigned_identity" "agic_identity" {
-  name                = "ingressapplicationgateway-${var.cluster_name}"
+  name                = "${var.agic_identity_name_prefix}-${var.cluster_name}"
   resource_group_name = "MC_${var.resource_group_name}_${var.cluster_name}_${var.location}" 
   
   depends_on = [azurerm_kubernetes_cluster.aks]

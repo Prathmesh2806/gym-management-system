@@ -12,8 +12,8 @@ resource "azurerm_virtual_network" "vnet" {
 # If we are NOT creating shared resources, we need to fetch the existing VNet
 data "azurerm_virtual_network" "vnet_data" {
   count               = var.create_shared_resources ? 0 : 1
-  name                = "gym-shared-vnet"
-  resource_group_name = "gym-app-dev-rg" # Anchor to dev
+  name                = var.vnet_name
+  resource_group_name = var.shared_resource_group # Anchor to dev
 }
 
 locals {
@@ -25,7 +25,7 @@ locals {
 
 resource "azurerm_public_ip" "nat_pip" {
   count               = var.create_shared_resources ? 1 : 0
-  name                = "gym-nat-pip"
+  name                = var.nat_pip_name
   location            = var.location
   resource_group_name = var.resource_group_name
   allocation_method   = "Static"
@@ -35,11 +35,11 @@ resource "azurerm_public_ip" "nat_pip" {
 
 resource "azurerm_nat_gateway" "nat_gw" {
   count                   = var.create_shared_resources ? 1 : 0
-  name                    = "gym-nat-gateway"
+  name                    = var.nat_gw_name
   location                = var.location
   resource_group_name     = var.resource_group_name
-  sku_name                = "Standard"
-  idle_timeout_in_minutes = 10
+  sku_name            = var.nat_sku
+  idle_timeout_in_minutes = var.nat_idle_timeout
   tags                    = var.tags
 }
 
@@ -52,8 +52,8 @@ resource "azurerm_nat_gateway_public_ip_association" "nat_assoc" {
 # Fetch NAT Gateway if not creating
 data "azurerm_nat_gateway" "nat_data" {
   count               = var.create_shared_resources ? 0 : 1
-  name                = "gym-nat-gateway"
-  resource_group_name = "gym-app-dev-rg"
+  name                = var.nat_gw_name
+  resource_group_name = var.shared_resource_group
 }
 
 locals {
@@ -76,18 +76,18 @@ locals {
 resource "azurerm_subnet" "public" {
   count                = var.public_subnet_count
   name                 = "${var.public_subnet_prefix}-${var.env}-${count.index + 1}"
-  resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
+  resource_group_name  = var.create_shared_resources ? var.resource_group_name : var.shared_resource_group
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 1 + local.offset)]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], var.subnet_newbits, count.index + 1 + local.offset)]
 }
 
 # Private App Subnets (Where AKS Lives)
 resource "azurerm_subnet" "app" {
   count                = var.app_subnet_count
   name                 = "${var.app_subnet_prefix}-${var.env}-${count.index + 1}"
-  resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
+  resource_group_name  = var.create_shared_resources ? var.resource_group_name : var.shared_resource_group
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 11 + local.offset)]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], var.subnet_newbits, count.index + 11 + local.offset)]
   service_endpoints    = var.app_service_endpoints
 }
 
@@ -102,17 +102,17 @@ resource "azurerm_subnet_nat_gateway_association" "app_nat" {
 resource "azurerm_subnet" "db" {
   count                = var.db_subnet_count
   name                 = "${var.db_subnet_prefix}-${var.env}-${count.index + 1}"
-  resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
+  resource_group_name  = var.create_shared_resources ? var.resource_group_name : var.shared_resource_group
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, count.index + 21 + local.offset)]
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], var.subnet_newbits, count.index + 21 + local.offset)]
 }
 
 # Subnet for Application Gateway
 resource "azurerm_subnet" "appgw" {
   name                 = "appgw-subnet-${var.env}"
-  resource_group_name  = var.create_shared_resources ? var.resource_group_name : "gym-app-dev-rg"
+  resource_group_name  = var.create_shared_resources ? var.resource_group_name : var.shared_resource_group
   virtual_network_name = local.vnet_name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], 8, 31 + local.offset)] 
+  address_prefixes     = [cidrsubnet(var.vnet_address_space[0], var.subnet_newbits, 31 + local.offset)] 
 }
 
 # --- Security Logic ---

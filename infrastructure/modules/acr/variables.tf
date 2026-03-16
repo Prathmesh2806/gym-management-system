@@ -14,6 +14,16 @@ variable "aks_principal_id" {
   type = string
 }
 
+variable "acr_sku" {
+  type    = string
+  default = "Basic"
+}
+
+variable "acr_admin_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "tags" {
   type        = map(string)
   description = "A mapping of tags to assign to the resources"

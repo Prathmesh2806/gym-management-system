@@ -47,7 +47,32 @@ variable "subscription_id" {
   description = "Azure Subscription ID"
 }
 
+variable "node_pool_name" {
+  type    = string
+  default = "default"
+}
+
+variable "network_plugin" {
+  type    = string
+  default = "azure"
+}
+
+variable "load_balancer_sku" {
+  type    = string
+  default = "standard"
+}
+
+variable "outbound_type" {
+  type    = string
+  default = "userAssignedNATGateway"
+}
+
 variable "tags" {
   type        = map(string)
   description = "A mapping of tags to assign to the resources"
+}
+
+variable "agic_identity_name_prefix" {
+  type    = string
+  default = "ingressapplicationgateway"
 }

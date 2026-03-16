@@ -5,16 +5,18 @@ resource "azurerm_resource_group" "gym_rg" {
 }
 
 resource "random_string" "suffix" {
-  length  = 6
+  length  = var.random_suffix_length
   special = false
   upper   = false
+  # special/upper are usually safe to keep hardcoded as 'false' unless 
+  # there's a specific need for special chars in ACR/resource names.
 }
 
 module "network" {
   source                = "./modules/network"
   resource_group_name   = azurerm_resource_group.gym_rg.name
   location              = azurerm_resource_group.gym_rg.location
-  vnet_name             = "gym-shared-vnet"
+  vnet_name             = var.vnet_name
   vnet_address_space    = var.vnet_address_space
   public_subnet_count   = var.public_subnet_count
   app_subnet_count      = var.app_subnet_count
@@ -27,6 +29,8 @@ module "network" {
   db_port               = var.db_port
   env                   = var.env
   create_shared_resources = var.env == "dev"
+  nat_pip_name          = var.nat_pip_name
+  nat_gw_name           = var.nat_gw_name
   tags                 = var.tags
 }
 
@@ -44,6 +48,7 @@ module "aks" {
   app_gateway_id      = azurerm_application_gateway.appgw.id
   vnet_id             = module.network.vnet_id
   subscription_id     = var.subscription_id
+  agic_identity_name_prefix = var.agic_identity_name_prefix
   tags                = var.tags
 }
 
@@ -57,73 +62,73 @@ module "acr" {
 }
 
 data "azurerm_public_ip" "appgw_pip" {
-  name                = "gym-appgw-pip-${var.env}"
-  resource_group_name = "tfstate-mgmt-rg"
+  name                = "${var.appgw_pip_name}-${var.env}"
+  resource_group_name = var.pip_resource_group
 }
 
 resource "azurerm_application_gateway" "appgw" {
-  name                = "gym-${var.env}-appgw"
+  name                = "${var.appgw_name}-${var.env}"
   resource_group_name = azurerm_resource_group.gym_rg.name
   location            = azurerm_resource_group.gym_rg.location
   tags                = var.tags
 
   sku {
-    name     = "Standard_v2"
-    tier     = "Standard_v2"
-    capacity = 1
+    name     = var.appgw_sku_name
+    tier     = var.appgw_sku_tier
+    capacity = var.appgw_capacity
   }
 
   gateway_ip_configuration {
-    name      = "my-gateway-ip-configuration"
+    name      = var.appgw_ip_config_name
     subnet_id = module.network.appgw_subnet_id
   }
 
   frontend_port {
-    name = "frontend-port"
-    port = 80
+    name = var.appgw_frontend_port_http_name
+    port = var.appgw_http_port
   }
 
   frontend_port {
-    name = "https-port"
-    port = 443
+    name = var.appgw_frontend_port_https_name
+    port = var.appgw_https_port
   }
 
   frontend_ip_configuration {
-    name                 = "frontend-ip-configuration"
+    name                 = var.appgw_frontend_ip_config_name
     public_ip_address_id = data.azurerm_public_ip.appgw_pip.id
   }
 
   backend_address_pool {
-    name = "default-backend-address-pool"
+    name = var.appgw_backend_pool_name
   }
 
   backend_http_settings {
-    name                  = "default-backend-http-settings"
+    name                  = var.appgw_http_settings_name
     cookie_based_affinity = "Disabled"
-    port                  = 80
+    port                  = var.appgw_http_port
     protocol              = "Http"
-    request_timeout       = 20
+    request_timeout       = var.appgw_request_timeout
   }
 
   http_listener {
-    name                           = "default-http-listener"
-    frontend_ip_configuration_name = "frontend-ip-configuration"
-    frontend_port_name             = "frontend-port"
+    name                           = var.appgw_listener_name
+    frontend_ip_configuration_name = var.appgw_frontend_ip_config_name
+    frontend_port_name             = var.appgw_frontend_port_http_name
     protocol                       = "Http"
   }
 
   request_routing_rule {
-    name                       = "default-request-routing-rule"
+    name                       = var.appgw_routing_rule_name
     rule_type                  = "Basic"
-    http_listener_name         = "default-http-listener"
-    backend_address_pool_name  = "default-backend-address-pool"
-    backend_http_settings_name = "default-backend-http-settings"
-    priority                   = 100
+    http_listener_name         = var.appgw_listener_name
+    backend_address_pool_name  = var.appgw_backend_pool_name
+    backend_http_settings_name = var.appgw_http_settings_name
+    priority                   = var.appgw_routing_rule_priority
   }
 
   ssl_policy {
     policy_type = "Predefined"
-    policy_name = "AppGwSslPolicy20220101"
+    policy_name = var.appgw_ssl_policy_name
   }
 
   lifecycle {
