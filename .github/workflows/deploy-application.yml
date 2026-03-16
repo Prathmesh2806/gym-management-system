@@ -146,6 +146,10 @@ jobs:
             fi
           fi
 
+          # Always update the registry hostname in the YAML to match the current environment
+          echo "Updating ACR registry prefix in kube/$SERVICE-deploy.yaml to ${{ env.ACR_NAME }}..."
+          sed -i "s|[a-zA-Z0-9]*\.azurecr\.io|${{ env.ACR_NAME }}.azurecr.io|g" kube/$SERVICE-deploy.yaml
+
           if [ "$DEPLOY_REQUIRED" == "true" ]; then
             FINAL_TAG=""
             if [ -n "${{ env.DB_PROMOTE }}" ]; then
@@ -165,6 +169,7 @@ jobs:
               echo "Setting image tag to $FINAL_TAG in kube/$SERVICE-deploy.yaml"
               sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
             fi
+            
             echo "Deploying $SERVICE to AKS..."
             kubectl apply -f kube/$SERVICE-deploy.yaml
           fi
@@ -211,6 +216,10 @@ jobs:
                 fi
               fi
 
+              # Always update the registry hostname in the YAML to match the current environment
+              echo "Updating ACR registry prefix in kube/$SERVICE-deploy.yaml to ${{ env.ACR_NAME }}..."
+              sed -i "s|[a-zA-Z0-9]*\.azurecr\.io|${{ env.ACR_NAME }}.azurecr.io|g" kube/$SERVICE-deploy.yaml
+
               if [ "$DEPLOY_REQUIRED" == "true" ]; then
                 FINAL_TAG=""
                 if [ -n "$PROMOTE_TAG" ]; then
@@ -256,6 +265,10 @@ jobs:
           fi
 
           if [ "$DEPLOY_REQUIRED" == "true" ]; then
+            # Always update the registry hostname in the YAML to match the current environment
+            echo "Updating ACR registry prefix in kube/$SERVICE-deploy.yaml to ${{ env.ACR_NAME }}..."
+            sed -i "s|[a-zA-Z0-9]*\.azurecr\.io|${{ env.ACR_NAME }}.azurecr.io|g" kube/$SERVICE-deploy.yaml
+
             # Install cert-manager and issuer
             kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
             echo "Waiting for cert-manager to be ready..."
