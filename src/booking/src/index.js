@@ -146,7 +146,7 @@ app.get('/api/bookings', async (_req, res) => {
 app.delete('/api/bookings/:id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+        if (rows.length === 0) return res.status(404).json({ error: 'Booking did not found' });
 
         const cancelled = {
             id: rows[0].id,
