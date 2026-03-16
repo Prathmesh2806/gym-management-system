@@ -53,26 +53,35 @@ jobs:
           
           # Install cert-manager
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
-          # Wait for cert-manager webhooks to be ready
           sleep 30
-          
-          # Apply the ClusterIssuer
           kubectl apply -f kube/cluster-issuer.yaml
           
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
-          
+          BUILD_REQUIRED=false
+          DEPLOY_REQUIRED=true # Always deploy if workflow started (YAML/Ingress/Src change)
+          FINAL_TAG=""
+
+          # Only build if src/frontend actually changed or manual run
+          if [ "${{ github.event_name }}" == "repository_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -q "src/frontend"; then
+            BUILD_REQUIRED=true
+          fi
+
           if [ -n "$PROMOTE_TAG" ] && [ "${{ env.DEPLOY_ENV }}" != "dev" ]; then
             echo "Promoting frontend with tag $PROMOTE_TAG from Dev ACR..."
             az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-frontend:$PROMOTE_TAG --image gym-frontend:$PROMOTE_TAG --force
             FINAL_TAG=$PROMOTE_TAG
-          else
+          elif [ "$BUILD_REQUIRED" == "true" ]; then
             echo "Building fresh frontend image..."
             FINAL_TAG="frontend-$SHORT_SHA"
             docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG ./src/frontend
             docker push ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG
+          else
+            echo "--- Skipping frontend build (No source changes detected) ---"
           fi
           
-          sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG|" kube/frontend-deploy.yaml
+          if [ -n "$FINAL_TAG" ]; then
+            sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-frontend:$FINAL_TAG|" kube/frontend-deploy.yaml
+          fi
           
           # Inject Environment Specific Hostname and TLS secret into Ingress
           DOMAIN="the-fitness-arena-${{ env.DEPLOY_ENV }}.duckdns.org"

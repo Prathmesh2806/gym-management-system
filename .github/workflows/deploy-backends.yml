@@ -57,7 +57,22 @@ jobs:
           SERVICES=("booking" "membership" "notifier")
           
           for SERVICE in "${SERVICES[@]}"; do
-            # Get specific promote tag for this service
+            BUILD_REQUIRED=false
+            DEPLOY_REQUIRED=false
+            FINAL_TAG=""
+
+            # Check for source changes
+            if [ "${{ github.event_name }}" == "repository_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then
+                BUILD_REQUIRED=true
+                DEPLOY_REQUIRED=true
+            fi
+            
+            # Check for deployment YAML changes
+            if git diff --name-only HEAD^ HEAD | grep -q "kube/$SERVICE-deploy.yaml"; then
+                DEPLOY_REQUIRED=true
+            fi
+
+            # Handle Promotion
             VAR_NAME=$(echo "${SERVICE}_PROMOTE" | tr '[:lower:]' '[:upper:]')
             PROMOTE_TAG=${!VAR_NAME}
             
@@ -65,18 +80,24 @@ jobs:
                 echo "Promoting $SERVICE with tag $PROMOTE_TAG from Dev ACR..."
                 az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-$SERVICE:$PROMOTE_TAG --image gym-$SERVICE:$PROMOTE_TAG --force
                 FINAL_TAG=$PROMOTE_TAG
-            elif [ "${{ github.event_name }}" == "repository_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then
+                DEPLOY_REQUIRED=true
+            elif [ "$BUILD_REQUIRED" == "true" ]; then
                 echo "Building fresh image for $SERVICE..."
                 IMAGE_TAG="$SERVICE-$SHORT_SHA"
                 docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$IMAGE_TAG ./src/$SERVICE
                 docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$IMAGE_TAG
                 FINAL_TAG=$IMAGE_TAG
-            else
-                echo "Skipping $SERVICE (No changes and no promotion tag)"
-                continue
             fi
-            
-            sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
-            kubectl apply -f kube/$SERVICE-deploy.yaml
+
+            if [ "$DEPLOY_REQUIRED" == "true" ]; then
+                if [ -n "$FINAL_TAG" ]; then
+                    echo "Updating image tag to $FINAL_TAG in kube/$SERVICE-deploy.yaml"
+                    sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
+                fi
+                echo "Deploying $SERVICE to AKS..."
+                kubectl apply -f kube/$SERVICE-deploy.yaml
+            else
+                echo "--- Skipping $SERVICE (No changes detected in src/$SERVICE or kube/$SERVICE-deploy.yaml) ---"
+            fi
           done
 
