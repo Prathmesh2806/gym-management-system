@@ -1,4 +1,5 @@
 env                  = "qa"
+create_shared_resources = false
 location             = "eastus2"
 
 node_count           = 1

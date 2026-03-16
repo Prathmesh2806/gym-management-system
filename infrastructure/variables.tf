@@ -92,19 +92,16 @@ variable "env" {
 variable "storage_account_tier" {
   type        = string
   description = "Storage Tier (Standard or Premium)"
-  default     = "Standard"
 }
 
 variable "storage_replication_type" {
   type        = string
   description = "Replication strategy for production"
-  default     = "GRS"
 }
 
 variable "storage_account_name" {
   type        = string
   description = "The full name of the storage account."
-  default     = null
 }
 
 variable "appgw_subnet_prefix" {
@@ -114,27 +111,22 @@ variable "appgw_subnet_prefix" {
 # --- App Gateway Settings ---
 variable "appgw_sku_name" {
   type    = string
-  default = "Standard_v2"
 }
 
 variable "appgw_sku_tier" {
   type    = string
-  default = "Standard_v2"
 }
 
 variable "appgw_capacity" {
   type    = number
-  default = 1
 }
 
 variable "pip_resource_group" {
   type    = string
-  default = "tfstate-mgmt-rg"
 }
 
 variable "appgw_ssl_policy_name" {
   type    = string
-  default = "AppGwSslPolicy20220101"
 }
 
 variable "subscription_id" {
@@ -145,97 +137,124 @@ variable "subscription_id" {
 variable "tags" {
   type        = map(string)
   description = "A mapping of tags to assign to the resources"
-  default     = {}
 }
 
 # --- Advanced Configuration Variables ---
 
 variable "appgw_pip_name" {
   type    = string
-  default = "gym-appgw-pip"
 }
 
 variable "appgw_name" {
   type    = string
-  default = "gym-appgw"
 }
 
 variable "appgw_ip_config_name" {
   type    = string
-  default = "my-gateway-ip-configuration"
 }
 
 variable "appgw_frontend_port_http_name" {
   type    = string
-  default = "frontend-port"
 }
 
 variable "appgw_frontend_port_https_name" {
   type    = string
-  default = "https-port"
 }
 
 variable "appgw_frontend_ip_config_name" {
   type    = string
-  default = "frontend-ip-configuration"
 }
 
 variable "appgw_backend_pool_name" {
   type    = string
-  default = "default-backend-address-pool"
 }
 
 variable "appgw_http_settings_name" {
   type    = string
-  default = "default-backend-http-settings"
 }
 
 variable "appgw_listener_name" {
   type    = string
-  default = "default-http-listener"
 }
 
 variable "appgw_routing_rule_name" {
   type    = string
-  default = "default-request-routing-rule"
 }
 
 variable "appgw_http_port" {
   type    = number
-  default = 80
 }
 
 variable "appgw_https_port" {
   type    = number
-  default = 443
 }
 
 variable "appgw_request_timeout" {
   type    = number
-  default = 20
 }
 
 variable "appgw_routing_rule_priority" {
   type    = number
-  default = 100
 }
 
 variable "random_suffix_length" {
   type    = number
-  default = 6
 }
 
 variable "nat_pip_name" {
   type    = string
-  default = "gym-nat-pip"
 }
 
 variable "nat_gw_name" {
   type    = string
-  default = "gym-nat-gateway"
 }
 
 variable "agic_identity_name_prefix" {
   type    = string
-  default = "ingressapplicationgateway"
+}
+
+# --- Module Specific Configuration (Previously Hidden Defaults) ---
+
+variable "nat_sku" {
+  type = string
+}
+
+variable "nat_idle_timeout" {
+  type = number
+}
+
+variable "subnet_newbits" {
+  type = number
+}
+
+variable "node_pool_name" {
+  type = string
+}
+
+variable "network_plugin" {
+  type = string
+}
+
+variable "load_balancer_sku" {
+  type = string
+}
+
+variable "outbound_type" {
+  type = string
+}
+
+variable "acr_sku" {
+  type = string
+}
+
+variable "acr_admin_enabled" {
+  type = bool
+}
+
+variable "shared_resource_group" {
+  type = string
+}
+
+variable "create_shared_resources" {
+  type = bool
 }

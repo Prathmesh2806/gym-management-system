@@ -49,22 +49,18 @@ variable "subscription_id" {
 
 variable "node_pool_name" {
   type    = string
-  default = "default"
 }
 
 variable "network_plugin" {
   type    = string
-  default = "azure"
 }
 
 variable "load_balancer_sku" {
   type    = string
-  default = "standard"
 }
 
 variable "outbound_type" {
   type    = string
-  default = "userAssignedNATGateway"
 }
 
 variable "tags" {
@@ -74,5 +70,4 @@ variable "tags" {
 
 variable "agic_identity_name_prefix" {
   type    = string
-  default = "ingressapplicationgateway"
 }

@@ -57,28 +57,23 @@ variable "db_port" {
 variable "create_shared_resources" {
   type        = bool
   description = "Whether to create the VNet and NAT Gateway (true for dev, false for others)"
-  default     = true
 }
 
 variable "shared_resource_group" {
   type        = string
   description = "Name of the resource group where shared resources (VNet/NAT) are located"
-  default     = "gym-app-dev-rg"
 }
 
 variable "nat_sku" {
   type    = string
-  default = "Standard"
 }
 
 variable "nat_idle_timeout" {
   type    = number
-  default = 10
 }
 
 variable "subnet_newbits" {
   type    = number
-  default = 8
 }
 
 variable "tags" {
@@ -88,10 +83,8 @@ variable "tags" {
 
 variable "nat_pip_name" {
   type    = string
-  default = "gym-nat-pip"
 }
 
 variable "nat_gw_name" {
   type    = string
-  default = "gym-nat-gateway"
 }

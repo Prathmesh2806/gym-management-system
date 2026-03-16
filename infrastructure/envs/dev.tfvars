@@ -1,4 +1,5 @@
 env                  = "dev"
+create_shared_resources = true
 location             = "eastus2"
 node_count           = 1
 vm_size              = "Standard_D2s_v3"

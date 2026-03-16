@@ -28,7 +28,11 @@ module "network" {
   db_nsg_name           = var.db_nsg_name
   db_port               = var.db_port
   env                   = var.env
-  create_shared_resources = var.env == "dev"
+  create_shared_resources = var.create_shared_resources
+  shared_resource_group = var.shared_resource_group
+  nat_sku               = var.nat_sku
+  nat_idle_timeout      = var.nat_idle_timeout
+  subnet_newbits        = var.subnet_newbits
   nat_pip_name          = var.nat_pip_name
   nat_gw_name           = var.nat_gw_name
   tags                 = var.tags
@@ -48,6 +52,10 @@ module "aks" {
   app_gateway_id      = azurerm_application_gateway.appgw.id
   vnet_id             = module.network.vnet_id
   subscription_id     = var.subscription_id
+  node_pool_name      = var.node_pool_name
+  network_plugin      = var.network_plugin
+  load_balancer_sku   = var.load_balancer_sku
+  outbound_type       = var.outbound_type
   agic_identity_name_prefix = var.agic_identity_name_prefix
   tags                = var.tags
 }
@@ -57,6 +65,8 @@ module "acr" {
   resource_group_name = azurerm_resource_group.gym_rg.name
   location            = azurerm_resource_group.gym_rg.location
   acr_name            = "gymappregistry${var.env}${random_string.suffix.result}"
+  acr_sku             = var.acr_sku
+  acr_admin_enabled   = var.acr_admin_enabled
   aks_principal_id    = module.aks.principal_id
   tags                = var.tags
 }

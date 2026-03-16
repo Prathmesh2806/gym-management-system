@@ -1,4 +1,5 @@
 env                  = "dr"
+create_shared_resources = false
 location             = "centralus" # Region changed
 node_count           = 1
 vm_size              = "Standard_D2s_v3"

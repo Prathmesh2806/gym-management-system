@@ -16,12 +16,10 @@ variable "aks_principal_id" {
 
 variable "acr_sku" {
   type    = string
-  default = "Basic"
 }
 
 variable "acr_admin_enabled" {
   type    = bool
-  default = false
 }
 
 variable "tags" {
