@@ -1,5 +1,4 @@
 # --- Shared Infrastructure (Created only if create_shared_resources is true) ---
-
 resource "azurerm_virtual_network" "vnet" {
   count               = var.create_shared_resources ? 1 : 0
   name                = var.vnet_name
@@ -22,7 +21,6 @@ locals {
 }
 
 # --- NAT Gateway (Shared Outbound) ---
-
 resource "azurerm_public_ip" "nat_pip" {
   count               = var.create_shared_resources ? 1 : 0
   name                = var.nat_pip_name
@@ -70,8 +68,6 @@ locals {
   offset = lookup(local.env_offsets, var.env, 0)
 }
 
-# --- Subnets (Always created per environment) ---
-
 # Public Subnets
 resource "azurerm_subnet" "public" {
   count                = var.public_subnet_count
@@ -115,9 +111,7 @@ resource "azurerm_subnet" "appgw" {
   address_prefixes     = [cidrsubnet(var.vnet_address_space[0], var.subnet_newbits, 31 + local.offset)] 
 }
 
-# --- Security Logic ---
-
-# NSG for App Subnet 
+# NSG for App Subnet
 resource "azurerm_network_security_group" "app_nsg" {
   name                = "gym-app-nsg-${var.env}"
   location            = var.location

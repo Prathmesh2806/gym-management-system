@@ -1,0 +1,241 @@
+name: 0. Unified Application Deployment
+on:
+  repository_dispatch:
+    types: [deploy-gym-application]
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, qa, prod, dr]
+      deploy_db:
+        description: 'Deploy Database?'
+        type: boolean
+        default: true
+      deploy_booking:
+        description: 'Deploy Booking Service?'
+        type: boolean
+        default: true
+      deploy_membership:
+        description: 'Deploy Membership Service?'
+        type: boolean
+        default: true
+      deploy_notifier:
+        description: 'Deploy Notifier Service?'
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: 'Deploy Frontend?'
+        type: boolean
+        default: true
+      db_tag:
+        description: 'DB Image Tag (Leave empty to build fresh)'
+        type: string
+        default: ''
+      booking_tag:
+        description: 'Booking Image Tag (Leave empty to build fresh)'
+        type: string
+        default: ''
+      membership_tag:
+        description: 'Membership Image Tag (Leave empty to build fresh)'
+        type: string
+        default: ''
+      notifier_tag:
+        description: 'Notifier Image Tag (Leave empty to build fresh)'
+        type: string
+        default: ''
+      frontend_tag:
+        description: 'Frontend Image Tag (Leave empty to build fresh)'
+        type: string
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Environment
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "DEPLOY_ENV=${{ github.event.client_payload.env }}" >> $GITHUB_ENV
+            echo "DB_PROMOTE=${{ github.event.client_payload.db_tag }}" >> $GITHUB_ENV
+            echo "BOOKING_PROMOTE=${{ github.event.client_payload.booking_tag }}" >> $GITHUB_ENV
+            echo "MEMBERSHIP_PROMOTE=${{ github.event.client_payload.membership_tag }}" >> $GITHUB_ENV
+            echo "NOTIFIER_PROMOTE=${{ github.event.client_payload.notifier_tag }}" >> $GITHUB_ENV
+            echo "FRONTEND_PROMOTE=${{ github.event.client_payload.frontend_tag }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "DEPLOY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
+            echo "DB_PROMOTE=${{ github.event.inputs.db_tag }}" >> $GITHUB_ENV
+            echo "BOOKING_PROMOTE=${{ github.event.inputs.booking_tag }}" >> $GITHUB_ENV
+            echo "MEMBERSHIP_PROMOTE=${{ github.event.inputs.membership_tag }}" >> $GITHUB_ENV
+            echo "NOTIFIER_PROMOTE=${{ github.event.inputs.notifier_tag }}" >> $GITHUB_ENV
+            echo "FRONTEND_PROMOTE=${{ github.event.inputs.frontend_tag }}" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+          fi
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Names and Context
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ] && [ -n "${{ github.event.client_payload.acr_name }}" ]; then
+            echo "ACR_NAME=${{ github.event.client_payload.acr_name }}" >> $GITHUB_ENV
+            echo "DEV_ACR_NAME=${{ github.event.client_payload.source_acr_name || 'gymappregdevunique' }}" >> $GITHUB_ENV
+          else
+            echo "ACR_NAME=gym${{ env.DEPLOY_ENV }}acr" >> $GITHUB_ENV
+            echo "DEV_ACR_NAME=gymappregdevunique" >> $GITHUB_ENV
+          fi
+          
+          echo "RG_NAME=gym-app-${{ env.DEPLOY_ENV }}-rg" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=gym-${{ env.DEPLOY_ENV }}-aks" >> $GITHUB_ENV
+          
+          az acr login --name gym${{ env.DEPLOY_ENV }}acr || echo "Retrying with direct name..." && az acr login --name ${{ env.ACR_NAME }}
+          az aks get-credentials --resource-group gym-app-${{ env.DEPLOY_ENV }}-rg --name gym-${{ env.DEPLOY_ENV }}-aks --overwrite-existing
+
+      # --- Database Section ---
+      - name: Deploy Database
+        if: github.event_name == 'push' || github.event.inputs.deploy_db == true || github.event_name == 'repository_dispatch'
+        run: |
+          SERVICE="db"
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          BUILD_REQUIRED=false
+          DEPLOY_REQUIRED=false
+          
+          if [ "${{ github.event_name }}" == "push" ]; then
+            if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE" || git diff --name-only HEAD^ HEAD | grep -q "kube/$SERVICE-deploy.yaml"; then
+              DEPLOY_REQUIRED=true
+              if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then BUILD_REQUIRED=true; fi
+            fi
+          else
+            DEPLOY_REQUIRED=true
+            if [ -z "${{ env.DB_PROMOTE }}" ]; then BUILD_REQUIRED=true; fi
+          fi
+
+          if [ "$DEPLOY_REQUIRED" == "true" ]; then
+            FINAL_TAG=""
+            if [ -n "${{ env.DB_PROMOTE }}" ] && [ "${{ env.DEPLOY_ENV }}" != "dev" ]; then
+              az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ env.DB_PROMOTE }} --image gym-$SERVICE:${{ env.DB_PROMOTE }} --force
+              FINAL_TAG=${{ env.DB_PROMOTE }}
+            elif [ "$BUILD_REQUIRED" == "true" ]; then
+              FINAL_TAG="$SERVICE-$SHORT_SHA"
+              docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG ./src/$SERVICE
+              docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG
+            fi
+            
+            if [ -n "$FINAL_TAG" ]; then
+              sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
+            fi
+            kubectl apply -f kube/$SERVICE-deploy.yaml
+          fi
+
+      # --- Backend Services Loop ---
+      - name: Deploy Backends
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          SERVICES=("booking" "membership" "notifier")
+          
+          for SERVICE in "${SERVICES[@]}"; do
+            INPUT_NAME="deploy_$SERVICE"
+            # Get promote tag dynamically
+            PROMOTE_VAR=$(echo "${SERVICE}_PROMOTE" | tr '[:lower:]' '[:upper:]')
+            PROMOTE_TAG=${!PROMOTE_VAR}
+            
+            SHOULD_RUN=false
+            if [ "${{ github.event_name }}" == "push" ]; then
+               SHOULD_RUN=true
+            elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+               SHOULD_RUN=true
+            elif [ "${{ github.event.inputs.deploy_booking }}" == "true" ] && [ "$SERVICE" == "booking" ]; then SHOULD_RUN=true;
+            elif [ "${{ github.event.inputs.deploy_membership }}" == "true" ] && [ "$SERVICE" == "membership" ]; then SHOULD_RUN=true;
+            elif [ "${{ github.event.inputs.deploy_notifier }}" == "true" ] && [ "$SERVICE" == "notifier" ]; then SHOULD_RUN=true;
+            fi
+
+            if [ "$SHOULD_RUN" == "true" ]; then
+              BUILD_REQUIRED=false
+              DEPLOY_REQUIRED=false
+              
+              if [ "${{ github.event_name }}" == "push" ]; then
+                if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE" || git diff --name-only HEAD^ HEAD | grep -q "kube/$SERVICE-deploy.yaml"; then
+                  DEPLOY_REQUIRED=true
+                  if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then BUILD_REQUIRED=true; fi
+                fi
+              else
+                DEPLOY_REQUIRED=true
+                if [ -z "$PROMOTE_TAG" ]; then BUILD_REQUIRED=true; fi
+              fi
+
+              if [ "$DEPLOY_REQUIRED" == "true" ]; then
+                FINAL_TAG=""
+                if [ -n "$PROMOTE_TAG" ] && [ "${{ env.DEPLOY_ENV }}" != "dev" ]; then
+                  az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-$SERVICE:$PROMOTE_TAG --image gym-$SERVICE:$PROMOTE_TAG --force
+                  FINAL_TAG=$PROMOTE_TAG
+                elif [ "$BUILD_REQUIRED" == "true" ]; then
+                  FINAL_TAG="$SERVICE-$SHORT_SHA"
+                  docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG ./src/$SERVICE
+                  docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG
+                fi
+                
+                if [ -n "$FINAL_TAG" ]; then
+                  sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
+                fi
+                kubectl apply -f kube/$SERVICE-deploy.yaml
+              fi
+            fi
+          done
+
+      # --- Frontend Section ---
+      - name: Deploy Frontend
+        if: github.event_name == 'push' || github.event.inputs.deploy_frontend == true || github.event_name == 'repository_dispatch'
+        run: |
+          SERVICE="frontend"
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          BUILD_REQUIRED=false
+          DEPLOY_REQUIRED=false
+          
+          if [ "${{ github.event_name }}" == "push" ]; then
+            if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE" || git diff --name-only HEAD^ HEAD | grep -q "kube/$SERVICE-deploy.yaml" || git diff --name-only HEAD^ HEAD | grep -q "kube/gym-ingress.yaml"; then
+              DEPLOY_REQUIRED=true
+              if git diff --name-only HEAD^ HEAD | grep -q "src/$SERVICE"; then BUILD_REQUIRED=true; fi
+            fi
+          else
+            DEPLOY_REQUIRED=true
+            if [ -z "${{ env.FRONTEND_PROMOTE }}" ]; then BUILD_REQUIRED=true; fi
+          fi
+
+          if [ "$DEPLOY_REQUIRED" == "true" ]; then
+            # Install cert-manager and issuer
+            kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
+            sleep 15
+            kubectl apply -f kube/cluster-issuer.yaml
+
+            FINAL_TAG=""
+            if [ -n "${{ env.FRONTEND_PROMOTE }}" ] && [ "${{ env.DEPLOY_ENV }}" != "dev" ]; then
+              az acr import --name ${{ env.ACR_NAME }} --source ${{ env.DEV_ACR_NAME }}.azurecr.io/gym-$SERVICE:${{ env.FRONTEND_PROMOTE }} --image gym-$SERVICE:${{ env.FRONTEND_PROMOTE }} --force
+              FINAL_TAG=${{ env.FRONTEND_PROMOTE }}
+            elif [ "$BUILD_REQUIRED" == "true" ]; then
+              FINAL_TAG="$SERVICE-$SHORT_SHA"
+              docker build -t ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG ./src/$SERVICE
+              docker push ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG
+            fi
+            
+            if [ -n "$FINAL_TAG" ]; then
+              sed -i "s|image:.*|image: ${{ env.ACR_NAME }}.azurecr.io/gym-$SERVICE:$FINAL_TAG|" kube/$SERVICE-deploy.yaml
+            fi
+
+            # Ingress logic
+            DOMAIN="the-fitness-arena-${{ env.DEPLOY_ENV }}.duckdns.org"
+            TLS_SECRET="gym-tls-${{ env.DEPLOY_ENV }}"
+            sed -i "s|__DOMAIN__|$DOMAIN|g" kube/gym-ingress.yaml
+            sed -i "s|__TLS_SECRET__|$TLS_SECRET|g" kube/gym-ingress.yaml
+            
+            kubectl apply -f kube/$SERVICE-deploy.yaml
+            kubectl apply -f kube/gym-ingress.yaml
+          fi
