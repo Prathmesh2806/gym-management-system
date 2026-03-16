@@ -238,7 +238,7 @@ jobs:
 
       # --- Frontend Section ---
       - name: Deploy Frontend
-        if: github.event_name == 'push' || github.event.inputs.deploy_frontend == true || github.event_name == 'repository_dispatch'
+        if: github.event_name == 'push' || github.event.inputs.deploy_frontend == true || github.event.inputs.deploy_frontend == 'true' || github.event_name == 'repository_dispatch'
         run: |
           SERVICE="frontend"
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
