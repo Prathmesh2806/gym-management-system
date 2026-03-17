@@ -16,6 +16,7 @@ on:
         options:
           - plan
           - apply
+          - destroy
 
 jobs:
   terraform:
@@ -104,8 +105,10 @@ jobs:
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: |
+          TAGS='{"project"="gym-management", "environment"="${{ github.event.inputs.env }}", "managed_by"="terraform"}'
           terraform destroy \
             -var="env=${{ github.event.inputs.env }}" \
+            -var="tags=$TAGS" \
             -var-file="envs/${{ github.event.inputs.env }}.tfvars" \
             -auto-approve
         working-directory: ./infrastructure
