@@ -26,4 +26,4 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: azure-application-gateway
+          class: azure/application-gateway
