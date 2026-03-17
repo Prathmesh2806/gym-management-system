@@ -9,10 +9,13 @@ on:
         type: choice
         options: [dev, qa, prod, dr]
       action:
-        description: 'Select Action'
+        description: 'Action (plan or apply)'
         required: true
+        default: 'plan'
         type: choice
-        options: [plan, apply, destroy]
+        options:
+          - plan
+          - apply
 
 jobs:
   terraform:
@@ -94,7 +97,7 @@ jobs:
         run: |
           IP_ADDR=$(echo "${{ steps.get_outputs.outputs.public_ip }}" | tr -d '\r' | tr -d '\n' | xargs)
           TOKEN=$(echo "${{ secrets.DUCKDNS_TOKEN }}" | tr -d '\r' | tr -d '\n' | xargs)
-          DOMAIN="the-fitness-arena-${{ github.event.inputs.env }}"
+          DOMAIN="the-fitzone-${{ github.event.inputs.env }}"
           echo "Updating $DOMAIN.duckdns.org to point to $IP_ADDR..."
           curl -v "https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&ip=$IP_ADDR"
 

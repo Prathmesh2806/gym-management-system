@@ -10,6 +10,11 @@ on:
         default: 'dev'
         type: choice
         options: [dev, qa, prod, dr]
+      tags:
+        description: 'Image tag to deploy (e.g., v1.0.0)'
+        required: false
+        default: ''
+        type: string
       deploy_db:
         description: 'Deploy Database?'
         type: boolean
@@ -295,7 +300,7 @@ jobs:
             fi
 
             # Ingress logic
-            DOMAIN="the-fitness-arena-${{ env.DEPLOY_ENV }}.duckdns.org"
+            DOMAIN="the-fitzone-${{ env.DEPLOY_ENV }}.duckdns.org"
             TLS_SECRET="gym-tls-${{ env.DEPLOY_ENV }}"
             sed -i "s|__DOMAIN__|$DOMAIN|g" kube/gym-ingress.yaml
             sed -i "s|__TLS_SECRET__|$TLS_SECRET|g" kube/gym-ingress.yaml

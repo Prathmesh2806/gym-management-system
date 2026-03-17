@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   name: gym-app-ingress
   annotations:
-    appgw.ingress.kubernetes.io/ssl-redirect: "false"
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
 spec:
   ingressClassName: azure-application-gateway
